@@ -1,0 +1,2786 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="6APDlDiKOEqXBZi8g9Pkno">
+<head data-page-node-id="GPHG7uM5v5fJo3D10hnPDe">
+<meta charset="UTF-8" data-page-node-id="3x5NYJONulLEeBFX0inTC5">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="HH2q5ajDCv4RQNnFzIIoq5">
+<title>语音播放功能原型 v2 — OS 机器列表（严格按截图样式）</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#F2F4F8;color:#333;font-size:13px;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+  a{color:inherit;text-decoration:none;}
+
+  /* ====== 顶部演示切换条 ====== */
+  .demo-bar{position:fixed;top:0;left:0;right:0;z-index:9999;height:36px;background:#1F2D3D;color:#fff;display:flex;align-items:center;justify-content:center;gap:14px;font-size:12px;}
+  .demo-bar .seg{display:flex;background:#2A3B4E;border-radius:6px;padding:3px;}
+  .demo-bar .seg button{border:none;background:transparent;color:#9FB3C8;padding:4px 16px;border-radius:4px;font-size:12px;}
+  .demo-bar .seg button.active{background:#2E6BFF;color:#fff;}
+  .demo-bar .tag{color:#A0B1C5;}
+  .demo-bar .tag b{color:#FFD666;}
+  .demo-bar .dl-btn{margin-left:auto;margin-right:16px;border:1px solid #4A5B6E;background:#2A3B4E;color:#C9D6E3;padding:4px 14px;border-radius:5px;font-size:12px;line-height:1.5;}
+  .demo-bar .dl-btn:hover{background:#33465C;color:#fff;}
+
+  /* ====== 需求说明展示区（原型底部，供前端查看） ====== */
+  .rd-section{background:#F2F4F8;padding:40px 20px 70px;border-top:2px solid #E3E8F0;}
+  .rd-head{max-width:920px;margin:0 auto 18px;display:flex;align-items:baseline;gap:12px;}
+  .rd-head h2{font-size:19px;color:#1F2D3D;font-weight:600;}
+  .rd-head span{font-size:12px;color:#8A99AB;}
+  .rd-head .rd-online{margin-left:auto;align-self:center;font-size:12px;color:#2E6BFF;text-decoration:none;border:1px solid #C9DAFF;background:#F2F6FF;padding:4px 12px;border-radius:5px;line-height:1.5;white-space:nowrap;}
+  .rd-head .rd-online:hover{background:#E4EDFF;border-color:#A9C5FF;}
+  .rd-card{max-width:920px;margin:0 auto;background:#fff;border:1px solid #EEF1F6;border-radius:10px;padding:38px 46px;box-shadow:0 2px 12px rgba(31,45,61,.05);font-size:13.5px;}
+  .rd-card h1{font-size:22px;color:#1F2D3D;margin-bottom:14px;line-height:1.4;}
+  .rd-card h2{font-size:17px;color:#2E6BFF;margin:28px 0 10px;padding-bottom:8px;border-bottom:1px solid #F0F2F5;line-height:1.4;}
+  .rd-card h3{font-size:15px;color:#1F2D3D;margin:20px 0 8px;line-height:1.4;}
+  .rd-card h4{font-size:13.5px;color:#5A6B7F;margin:14px 0 6px;line-height:1.4;}
+  .rd-card p{line-height:1.8;color:#3D4D5E;margin:8px 0;}
+  .rd-card blockquote{margin:12px 0;padding:10px 14px;background:#F7F9FC;border-left:3px solid #2E6BFF;color:#5A6B7F;font-size:13px;line-height:1.7;border-radius:0 6px 6px 0;}
+  .rd-card ul{margin:8px 0;padding-left:22px;color:#3D4D5E;line-height:1.8;}
+  .rd-card ul ul{padding-left:20px;}
+  .rd-card li{margin:3px 0;}
+  .rd-card hr{border:none;border-top:1px solid #F0F2F5;margin:24px 0;}
+  .rd-card table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13px;}
+  .rd-card th,.rd-card td{border:1px solid #EBEEF4;padding:8px 12px;text-align:left;color:#3D4D5E;line-height:1.6;}
+  .rd-card th{background:#F7F9FC;color:#1F2D3D;font-weight:600;}
+  .rd-table-wrap{overflow-x:auto;margin:14px 0;}
+  .rd-card code{background:#F0F3F8;border-radius:4px;padding:1px 6px;font-family:Consolas,monospace;font-size:12px;color:#C2540A;}
+  .rd-card pre.rd-code{background:#1F2D3D;color:#D7E3F0;border-radius:8px;padding:14px 18px;font-size:12.5px;line-height:1.75;overflow-x:auto;margin:14px 0;font-family:Consolas,monospace;white-space:pre;}
+  .demo-bar .dl-btn{margin-left:auto;border:1px solid #4A5B6E;background:#2A3B4E;color:#C9D6E3;padding:4px 14px;border-radius:5px;font-size:12px;margin-right:16px;}
+  .demo-bar .dl-btn:hover{background:#33465C;color:#fff;}
+
+  /* ====== 应用框架 ====== */
+  .app{padding-top:36px;}
+  .app.hidden{display:none;}
+
+  /* 顶部导航 */
+  .topbar{height:54px;background:#fff;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid #F0F2F5;}
+  .topbar .logo{display:flex;align-items:center;gap:8px;margin-right:36px;}
+  .topbar .logo .ic{width:28px;height:28px;border-radius:6px;background:#FFB100;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;}
+  .topbar .logo span{font-size:15px;font-weight:600;color:#1F2D3D;}
+  .topbar .nav{display:flex;height:100%;}
+  .topbar .nav a{display:flex;align-items:center;padding:0 18px;font-size:14px;color:#5A6B7F;position:relative;}
+  .topbar .nav a.active{color:#2E6BFF;font-weight:600;}
+  .topbar .nav a.active::after{content:"";position:absolute;left:14px;right:14px;bottom:0;height:2px;background:#2E6BFF;border-radius:2px 2px 0 0;}
+  .topbar .nav a .arr{font-size:9px;margin-left:3px;color:#9AA8B8;}
+  .topbar .right{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:13px;color:#5A6B7F;}
+  .topbar .right .icn{width:18px;height:18px;color:#8A99AB;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+  .topbar .right .lang{font-size:12px;color:#5A6B7F;display:flex;align-items:center;gap:4px;}
+  .topbar .right .user{display:flex;align-items:center;gap:6px;}
+  .topbar .right .avatar{width:26px;height:26px;border-radius:50%;background:#FFD8B0;color:#C2540A;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}
+
+  /* 左右主区 */
+  .body{display:flex;min-height:calc(100vh - 90px);}
+  .sidebar{width:200px;background:#fff;border-right:1px solid #F0F2F5;padding:10px 0;flex-shrink:0;}
+  .sidebar .mi{display:flex;align-items:center;gap:9px;padding:9px 18px;color:#5A6B7F;font-size:13px;cursor:pointer;user-select:none;}
+  .sidebar .mi:hover{background:#F5F7FA;color:#1F2D3D;}
+  .sidebar .mi .ic{width:18px;height:18px;border-radius:4px;background:#EEF1F6;color:#8A99AB;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+  .sidebar .mi.parent .ic.on{background:#2E6BFF;color:#fff;}
+  .sidebar .mi.active{background:#E8F0FF;color:#2E6BFF;font-weight:600;}
+  .sidebar .mi.active .ic{background:#2E6BFF;color:#fff;}
+  .sidebar .sub{padding-left:39px;}
+  .sidebar .sub .mi{padding:8px 18px 8px 6px;font-size:13px;}
+  .sidebar .new-tag{margin-left:auto;background:#F53F3F;color:#fff;font-size:10px;padding:0 6px;border-radius:8px;line-height:16px;}
+
+  /* 主区域 */
+  main{flex:1;padding:14px 20px 30px;min-width:0;}
+  .crumbs{font-size:12px;color:#8A99AB;margin-bottom:14px;}
+  .crumbs b{color:#1F2D3D;font-weight:500;}
+
+  /* 标签页 */
+  .tabs{display:flex;gap:24px;border-bottom:1px solid #F0F2F5;margin-bottom:14px;}
+  .tabs a{padding:10px 0;font-size:13px;color:#5A6B7F;position:relative;}
+  .tabs a.active{color:#2E6BFF;font-weight:600;}
+  .tabs a.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:#2E6BFF;border-radius:2px;}
+
+  /* 筛选卡片 */
+  .card{background:#fff;border-radius:5px;border:1px solid #ECEEF2;}
+  .filter{padding:14px 16px 8px;}
+  .filter .row{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;}
+  .filter .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:170px;}
+  .filter .field label{font-size:12px;color:#5A6B7F;}
+  .filter .field .ctrl{height:32px;border:1px solid #DCE0E6;border-radius:4px;padding:0 10px;font-size:13px;color:#333;display:flex;align-items:center;background:#fff;color:#B0B8C2;}
+  .filter .field .ctrl.sel::after{content:"▾";margin-left:auto;color:#8A99AB;font-size:10px;}
+  .filter .field .ctrl.sel{position:relative;cursor:pointer;}
+  .filter .field .ctrl.sel .sel-txt{pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .filter .field .ctrl.sel.picked{color:#1F2D3D;}
+  .opt-list{position:absolute;top:calc(100% + 4px);left:-1px;right:-1px;background:#fff;border:1px solid #DCE0E6;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:100;display:none;overflow:hidden;min-width:140px;}
+  .opt-list.show{display:block;}
+  .opt-list div{padding:8px 12px;font-size:13px;color:#1F2D3D;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .opt-list div:hover{background:#F0F5FF;color:#2E6BFF;}
+  .opt-list div.active{color:#2E6BFF;font-weight:500;background:#F0F5FF;}
+  .filter .field .ctrl input{border:none;outline:none;width:100%;background:transparent;font-size:13px;color:#1F2D3D;}
+  .filter .field .ctrl.range{align-items:center;gap:6px;color:#B0B8C2;}
+  .filter .field .ctrl.range input{flex:1;min-width:60px;}
+  .filter .field .ctrl.range .cal{color:#8A99AB;font-size:13px;}
+  .filter .field input::placeholder,.filter .field .ctrl{color:#B0B8C2;}
+  .filter .field input:focus::placeholder{color:transparent;}
+
+  .filter .actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px;}
+  .btn{display:inline-flex;align-items:center;gap:5px;border:none;border-radius:4px;font-size:13px;padding:6px 18px;line-height:20px;}
+  .btn.primary{background:#2E6BFF;color:#fff;}
+  .btn.primary:hover{background:#1D5AE6;}
+  .btn.default{background:#fff;color:#5A6B7F;border:1px solid #DCE0E6;}
+  .btn.default:hover{border-color:#2E6BFF;color:#2E6BFF;}
+  .btn.sm{padding:3px 12px;font-size:12px;line-height:18px;}
+  .btn .arr{font-size:9px;}
+
+  /* 批量按钮栏 */
+  .batch{display:flex;align-items:center;background:#fff;border:1px solid #ECEEF2;border-radius:5px;padding:10px 14px;margin-top:12px;}
+  .batch .l{display:flex;gap:8px;flex-wrap:wrap;}
+  .batch .r{margin-left:auto;display:flex;align-items:center;gap:22px;font-size:13px;color:#5A6B7F;}
+  .batch .r b{font-weight:700;font-size:15px;margin-left:4px;}
+  .batch .r .stat-total b{color:#2E6BFF;}
+  .batch .r .stat-online b{color:#00B42A;}
+  .batch .r .stat-offline b{color:#F53F3F;}
+
+  /* 表格 */
+  .grid{width:100%;border-collapse:collapse;background:#fff;border:1px solid #ECEEF2;border-radius:5px;overflow:hidden;margin-top:12px;}
+  .grid th{background:#F5F7FA;font-size:12px;color:#5A6B7F;text-align:left;padding:11px 12px;font-weight:500;border-bottom:1px solid #ECEEF2;white-space:nowrap;}
+  .grid td{font-size:13px;padding:11px 12px;border-bottom:1px solid #F0F2F5;color:#1F2D3D;vertical-align:middle;}
+  .grid tr:hover td{background:#FAFBFD;}
+  .grid a.link{color:#2E6BFF;}
+  .grid a.link:hover{text-decoration:underline;}
+  .grid .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+  .grid .dot.on{background:#00B42A;}
+  .grid .dot.off{background:#C0C8D4;}
+  .grid .dot.on + span{color:#00B42A;}
+  .grid .dot.off + span{color:#8A99AB;}
+  .grid input[type=checkbox]{width:14px;height:14px;accent-color:#2E6BFF;}
+  .grid .voice-cell{display:flex;align-items:center;gap:6px;}
+  .grid .voice-cell .vs{width:18px;height:18px;border-radius:50%;background:#E8F0FF;color:#2E6BFF;display:inline-flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
+  .grid .voice-cell .vn{font-size:13px;color:#1F2D3D;}
+  .grid .voice-cell .vt{font-size:11px;color:#8A99AB;}
+  .grid .voice-cell.empty .vs{background:#F0F2F5;color:#B0B8C2;}
+  .grid .voice-cell.empty .vn{color:#B0B8C2;font-size:12px;}
+
+  /* 分页 */
+  .pager{display:flex;justify-content:flex-end;align-items:center;gap:5px;padding:12px 14px;font-size:13px;color:#5A6B7F;background:#fff;border:1px solid #ECEEF2;border-top:none;border-radius:0 0 5px 5px;margin-top:-1px;}
+  .pager button{min-width:28px;height:28px;border:1px solid #DCE0E6;background:#fff;color:#5A6B7F;border-radius:3px;font-size:12px;}
+  .pager button.active{background:#2E6BFF;border-color:#2E6BFF;color:#fff;}
+  .pager button:disabled{color:#C0C8D4;border-color:#ECEEF2;cursor:not-allowed;}
+  .pager .txt{font-size:12px;margin:0 6px;}
+  .pager .stat-line{font-size:13px;color:#5A6B7F;display:flex;align-items:center;}
+  .pager .stat-line b{color:#1F2D3D;font-weight:600;margin:0 2px;}
+  .pager input{font-family:inherit;color:#1F2D3D;}
+
+  /* 解除语音弹窗分页器：参考大黄鹅风格——单行居中、数字无边框、当前页蓝 */
+  .unbind-pager{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#FAFBFC;border-top:1px solid #ECEEF2;font-size:12px;color:#5A6B7F;}
+  .unbind-pager .up-txt{margin:0 2px;}
+  .unbind-pager .up-num{min-width:24px;height:24px;padding:0 6px;border:none;background:transparent;font-size:12px;color:#5A6B7F;cursor:pointer;border-radius:3px;font-family:inherit;}
+  .unbind-pager .up-num:hover{color:#2E6BFF;}
+  .unbind-pager .up-num.active{color:#2E6BFF;font-weight:600;}
+  .unbind-pager .up-num:disabled{color:#C0C8D4;cursor:not-allowed;background:transparent;}
+  .unbind-pager .up-arrow{min-width:24px;height:24px;padding:0 4px;border:none;background:transparent;color:#5A6B7F;cursor:pointer;font-size:14px;border-radius:3px;font-family:inherit;}
+  .unbind-pager .up-arrow:hover{color:#2E6BFF;}
+  .unbind-pager .up-arrow:disabled{color:#C0C8D4;cursor:not-allowed;}
+  .unbind-pager .up-sep{color:#B0B7C2;margin:0 2px;letter-spacing:-2px;}
+  .unbind-pager .up-jump{width:42px;height:24px;border:1px solid #DCE0E6;border-radius:3px;text-align:center;font-size:12px;color:#1F2D3D;font-family:inherit;padding:0;}
+  .unbind-pager .up-size{width:80px;height:24px;border:1px solid #DCE0E6;border-radius:3px;font-size:12px;color:#5A6B7F;padding:0 18px 0 6px;background:#fff url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5l3 3 3-3' stroke='%238A99AB' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>\") no-repeat right 4px center;background-size:8px 8px;-webkit-appearance:none;appearance:none;font-family:inherit;cursor:pointer;}
+
+  /* 弹窗 */
+  .mask{position:fixed;inset:0;background:rgba(20,30,45,.55);z-index:1000;display:none;align-items:center;justify-content:center;}
+  .mask.show{display:flex;}
+  .modal{background:#fff;border-radius:8px;width:560px;max-height:84vh;overflow:auto;box-shadow:0 10px 35px rgba(0,0,0,.18);}
+  .modal.wide{width:680px;}
+  .modal .mh{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #ECEEF2;}
+  .modal .mh h3{font-size:15px;color:#1F2D3D;font-weight:600;}
+  .modal .mh .x{border:none;background:none;font-size:20px;color:#8A99AB;line-height:1;}
+  .modal .mb{padding:18px;}
+  .modal .mf{padding:12px 18px;border-top:1px solid #ECEEF2;display:flex;justify-content:flex-end;gap:8px;}
+
+  /* 页面居中消息/确认弹层（替代原生 alert/confirm） */
+  .msg-box{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:6px;width:380px;padding:22px 24px;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:1100;display:none;animation:msgIn .14s ease-out;}
+  .msg-box.show{display:block;}
+  /* toast 模式：顶部居中胶囊，过几秒自动消失。z-index 必须高于 .demo-bar(9999) 和 .mask(1000)，否则会被遮 */
+  .msg-box.toast-mode{top:50px;bottom:auto;left:50%;transform:translate(-50%,0);width:auto;min-width:200px;max-width:480px;padding:10px 18px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.14);display:none;z-index:10010;}
+  .msg-box.toast-mode.show{display:block;animation:toastIn .16s ease-out;}
+  .msg-box.toast-mode .mi-icon{display:none;}
+  .msg-box.toast-mode .mi-text{font-size:13px;text-align:center;}
+  .msg-box.toast-mode .mi-foot{display:none;}
+  .msg-box.toast-mode.warn{background:#FFF7E8;color:#8B5A00;border:1px solid #FFE0B2;}
+  .msg-box.toast-mode.warn .mi-icon{display:none;}
+  .msg-box.toast-mode.error{background:#FFF1F0;color:#A8071A;border:1px solid #FFCCC7;}
+  .msg-box.toast-mode.success{background:#E8FFEA;color:#0D7A2F;border:1px solid #B7EB8F;}
+  .msg-box.toast-mode.info{background:#E8F0FF;color:#1D4ED8;border:1px solid #C9D8F8;}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,-12px);}to{opacity:1;transform:translate(-50%,0);}}
+  .msg-box .mi-icon{display:flex;justify-content:center;margin-bottom:12px;}
+  .msg-box .mi-icon span{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;}
+  .msg-box.warn .mi-icon span{background:#FF7D00;}
+  .msg-box.error .mi-icon span{background:#F53F3F;}
+  .msg-box.info .mi-icon span{background:#2E6BFF;}
+  .msg-box.success .mi-icon span{background:#00B42A;}
+  .msg-box .mi-text{font-size:14px;color:#1F2D3D;line-height:1.6;text-align:center;white-space:pre-wrap;word-break:break-word;}
+  .msg-box .mi-foot{display:flex;justify-content:center;gap:10px;margin-top:18px;}
+  @keyframes msgIn{from{opacity:0;transform:translate(-50%,-46%);}to{opacity:1;transform:translate(-50%,-50%);}}
+
+  .form-item{margin-bottom:14px;}
+  .form-item label{display:block;font-size:13px;color:#1F2D3D;margin-bottom:6px;}
+  .form-item label .req{color:#F53F3F;}
+  .form-item input[type=text],.form-item textarea,.form-item select{width:100%;height:34px;border:1px solid #DCE0E6;border-radius:4px;padding:0 10px;font-size:13px;color:#1F2D3D;background:#fff;}
+  .form-item textarea{height:80px;padding:8px 10px;resize:none;}
+  .form-item .hint{font-size:12px;color:#8A99AB;margin-top:4px;}
+
+  .upload-box{border:1.5px dashed #C8D3E0;border-radius:5px;background:#FAFBFC;padding:28px 16px;text-align:center;cursor:pointer;}
+  .upload-box:hover{border-color:#2E6BFF;background:#F5F8FF;}
+  .upload-box .ui{font-size:30px;color:#2E6BFF;margin-bottom:6px;}
+  .upload-box p{font-size:13px;color:#5A6B7F;margin-top:4px;}
+  .upload-box p b{color:#2E6BFF;}
+  .upload-box .u-h{font-size:12px;color:#8A99AB;margin-top:6px;}
+  .file-info{display:flex;align-items:center;gap:10px;background:#F5F7FA;border:1px solid #ECEEF2;border-radius:4px;padding:10px 12px;margin-top:10px;}
+  .file-info .fn{font-size:13px;color:#1F2D3D;}
+  .file-info .fs{font-size:12px;color:#8A99AB;}
+  .file-info .fd{margin-left:auto;color:#F53F3F;font-size:12px;cursor:pointer;background:none;border:none;}
+
+  .machine-pick{border:1px solid #ECEEF2;border-radius:5px;max-height:280px;overflow:auto;}
+  .mp-head{display:flex;align-items:center;flex-wrap:nowrap;gap:8px;padding:10px 12px;background:#FAFBFC;border-bottom:1px solid #ECEEF2;position:sticky;top:0;z-index:1;}
+  .mp-head input{height:28px;border:1px solid #DCE0E6;border-radius:4px;padding:0 8px;font-size:12px;flex:0 0 160px;width:160px;max-width:160px;outline:none;box-sizing:border-box;}
+  .mp-head input:focus{border-color:#2E6BFF;}
+  /* 机器选择列表表头（机器编号 / 机器名称）—— 用 table 元素强制列对齐，避免内容渲染差异导致偏差 */
+  table.mp-tbl{width:100%;border-collapse:collapse;background:#fff;}
+  table.mp-tbl th{background:#F5F7FA;font-size:12px;color:#8A99AB;text-align:left;padding:10px 12px;font-weight:500;border-bottom:1px solid #ECEEF2;white-space:nowrap;vertical-align:middle;}
+  table.mp-tbl td{font-size:13px;padding:8px 12px;border-bottom:1px solid #F0F2F5;color:#1F2D3D;vertical-align:middle;}
+  table.mp-tbl tr.mp-row{cursor:pointer;}
+  table.mp-tbl tr.mp-row:hover td{background:#FAFBFD;}
+  table.mp-tbl tr.mp-row.checked td{background:#E8F0FF;}
+  table.mp-tbl .col-box{width:30px;text-align:left;}
+  table.mp-tbl .col-id{width:130px;}
+  table.mp-tbl .col-name{}
+  table.mp-tbl .mp-id{color:#2E6BFF;font-weight:600;font-size:12px;}
+  table.mp-tbl .mp-name{color:#1F2D3D;font-size:13px;}
+  table.mp-tbl input[type=checkbox]{width:15px;height:15px;accent-color:#2E6BFF;margin:0;cursor:pointer;}
+  table.mp-tbl .vp-empty{text-align:center;color:#8A99AB;padding:36px 0;}
+  .mp-row .mp-count{margin-left:auto;font-size:12px;color:#8A99AB;}
+
+  /* 推送机器弹窗：搜索头/表格/分页器 三段自适应 */
+  .push-panel{border:1px solid #ECEEF2;border-radius:5px;background:#fff;display:flex;flex-direction:column;max-height:340px;overflow:hidden;}
+  .push-tbl-wrap{flex:1;overflow:auto;}
+  .push-tbl-wrap table.mp-tbl{border-bottom:1px solid #ECEEF2;}
+  table.mp-tbl .col-box{text-align:center;width:34px;}
+  table.mp-tbl thead .check-all{margin:0;cursor:pointer;}
+  /* 售货机不支持语音推送：置灰禁用 */
+  tr.mp-row.mp-disabled{opacity:.55;background:#F7F8FA;cursor:not-allowed;}
+  tr.mp-row.mp-disabled .mp-id{color:#B8BEC7;}
+  tr.mp-row.mp-disabled .mp-name{color:#B8BEC7;}
+  .mp-tag{display:inline-block;font-size:11px;color:#8A99AB;border:1px solid #E0E5EB;border-radius:3px;padding:0 4px;margin-left:6px;line-height:16px;vertical-align:1px;}
+  /* v8.43 #14：两个推送弹窗主标题相同但流程方向相反（一个选机器、一个选语音），副标题区分 */
+  .mh-sub{margin-left:8px;font-size:12px;font-weight:400;color:#8A99AB;}
+  tr.disabled-row{background:#F7F8FA;}
+  tr.disabled-row td{color:#B8BEC7;}
+  tr.disabled-row:hover td{background:#F7F8FA;}
+  tr.disabled-row a.link{color:#B8BEC7;pointer-events:none;}
+  .no-voice-tag{display:inline-block;font-size:12px;color:#FF4D4F;border:1px solid #FFCCC7;background:#FFF1F0;border-radius:3px;padding:0 5px;margin-left:6px;line-height:18px;}
+
+  .voice-pick{overflow:auto;max-height:340px;background:#fff;border-radius:6px;}
+  .voice-pick .vp-row{display:flex;align-items:center;gap:16px;padding:18px 24px;border-bottom:1px solid #F0F2F5;cursor:pointer;transition:background .15s;position:relative;}
+  .voice-pick .vp-row:last-child{border-bottom:none;}
+  .voice-pick .vp-row:hover{background:#FAFBFD;}
+  .voice-pick .vp-row.selected{background:#F0F5FF;}
+  .vp-radio-wrap{flex-shrink:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .vp-radio-wrap input[type=radio]{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2;}
+  .vp-radio-wrap .vp-radio-dot{width:18px;height:18px;border:1.5px solid #C0C8D4;border-radius:50%;background:#fff;position:relative;transition:all .15s;box-sizing:border-box;}
+  .voice-pick .vp-row.selected .vp-radio-dot{border-color:#2E6BFF;border-width:5px;}
+  .voice-pick .vp-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px;margin:0;}
+  .vp-info .vn{font-size:14px;color:#1F2D3D;font-weight:600;line-height:1.4;}
+  .vp-info .vm{font-size:12px;color:#8A99AB;line-height:1.4;}
+  .vp-play{flex-shrink:0;display:inline-flex;align-items:center;gap:4px;background:transparent;color:#2E6BFF;border:none;font-size:13px;cursor:pointer;line-height:1;padding:4px 6px;transition:color .15s;}
+  .vp-play::before{content:"▶";font-size:10px;line-height:1;}
+  .vp-play:hover{color:#1456E0;}
+  .vp-play.is-playing{color:#FF7D00;}
+  .vp-play.is-playing::before{content:"■";font-size:11px;}
+  .vp-empty{padding:40px;text-align:center;color:#8A99AB;font-size:13px;}
+
+  .radio-group{display:flex;flex-direction:column;gap:8px;}
+  .radio-group label{display:flex;align-items:center;gap:6px;font-size:13px;color:#333;cursor:pointer;}
+
+  /* 试听按钮：白底带边框小方块 + 三角，双端共用 */
+  .play{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border:1px solid #C9D8F8;background:#fff;color:#2E6BFF;font-size:12px;border-radius:3px;cursor:pointer;white-space:nowrap;font-family:inherit;line-height:1;transition:all .15s;}
+  .play::before{content:"▶";font-size:9px;color:#2E6BFF;}
+  .play:hover{border-color:#2E6BFF;background:#F0F5FF;}
+  .play.is-playing::before{content:"■";}
+  .play.is-playing{color:#FF7D00;border-color:#FFD591;background:#FFF7E8;}
+  .play.is-playing:hover{background:#FFF0DC;}
+
+  /* 播报场景标签 */
+  .scene-tag{display:inline-block;font-size:12px;color:#2E6BFF;background:#E8F0FF;border:1px solid #C9D8F8;border-radius:3px;padding:2px 8px;white-space:nowrap;line-height:1.4;}
+
+  /* 详情页内 chip 容器 */
+  .info-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#5A6B7F;background:#fff;border:1px solid #ECEEF2;padding:4px 10px;border-radius:3px;}
+  .info-chip b{color:#8A99AB;font-weight:400;}
+
+  /* 链接式行内操作（按钮式：用于 OS 审核页通过/驳回/查看等显眼操作） */
+  .op-link{display:inline-block;background:#fff;border:1px solid #C9D8F8;color:#2E6BFF;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:3px;margin-right:6px;font-family:inherit;line-height:1.4;white-space:nowrap;}
+  .op-link:last-child{margin-right:0;}
+  .op-link:hover{background:#E8F0FF;border-color:#2E6BFF;color:#1F4FCF;}
+  .op-link.danger{color:#F53F3F;border-color:#FFCCC7;background:#FFF7F7;}
+  .op-link.danger:hover{background:#FFEBEB;border-color:#F53F3F;color:#D32A2A;}
+  .op-link:disabled{color:#C0C8D4;border-color:#ECEEF2;cursor:not-allowed;background:#FAFBFC;}
+
+  /* 文字式行内操作（纯链接：用于客户语音管理页操作列，不带边框/底色） */
+  .op-link-text{background:none;border:none;color:#2E6BFF;font-size:12px;cursor:pointer;padding:0;margin-right:14px;font-family:inherit;line-height:1.4;white-space:nowrap;}
+  .op-link-text:last-child{margin-right:0;}
+  .op-link-text:hover{color:#1F4FCF;text-decoration:underline;}
+  .op-link-text.danger{color:#F53F3F;}
+  .op-link-text.danger:hover{color:#D32A2A;}
+
+  .info-banner{display:flex;align-items:center;gap:8px;background:#E8F0FF;border:1px solid #C9D8F8;color:#2E6BFF;font-size:12px;padding:10px 14px;border-radius:4px;margin-bottom:14px;}
+  .info-banner .bi{font-size:14px;}
+
+  /* 页面顶部警告横幅条（校验提示样式：橙色背景 + 圆形❗ + 左对齐文案） */
+  
+  /* OS审核列表页（简化版） */
+  .page-os-audit main{padding:20px 24px;max-width:1180px;}
+  .page-os-audit .audit-table{width:100%;margin:12px 0 0;border-collapse:collapse;background:#fff;border:1px solid #ECEEF2;border-radius:5px;overflow:hidden;table-layout:fixed;}
+  .page-os-audit .audit-table th,.page-os-audit .audit-table td{vertical-align:top;text-align:left;box-sizing:border-box;padding-left:12px;padding-right:12px;}
+  .page-os-audit .audit-table th{background:#F5F7FA;font-size:12px;color:#5A6B7F;text-align:left;padding-top:11px;padding-bottom:11px;font-weight:500;border-bottom:1px solid #ECEEF2;padding-left:12px;padding-right:12px;}
+  .page-os-audit .audit-table td{padding-top:11px;padding-bottom:11px;border-bottom:1px solid #F0F2F5;font-size:13px;color:#1F2D3D;line-height:1.5;}
+  .page-os-audit .audit-table .desc-col{word-break:break-all;white-space:normal;line-height:1.5;color:#5A6B7F;font-size:12px;}
+  .page-os-audit .audit-table .play{/* 见上方全局 .play */}
+  .page-os-audit .audit-table td.status-cell,.page-os-audit .audit-table td.ops-cell{white-space:nowrap;padding-top:13px;}
+  .page-os-audit .tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;white-space:nowrap;text-align:left;}
+  .page-os-audit .tag-pending{background:#FFF3E8;color:#FF7D00;}
+  .page-os-audit .tag-pass{background:#E8FFEA;color:#00B42A;}
+  .page-os-audit .tag-reject{background:#FFECE8;color:#F53F3F;}
+  .page-os-audit .reason{font-size:11px;color:#F53F3F;margin-top:3px;display:block;}
+
+  /* OS 语音播放器组件 */
+  .voice-player{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;background:#F8FAFC;border:1px solid #E4E9F0;border-radius:6px;min-width:380px;}
+  .voice-player .pp-btn{width:34px;height:34px;border-radius:50%;background:#2E6BFF;color:#fff;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .voice-player .pp-btn:hover{background:#1B5BD8;}
+  .voice-player .pp-btn.is-playing{background:#FF7D00;}
+  .voice-player .pp-wave{flex:1;height:24px;background:linear-gradient(to right, #C8D6F5 0%, #C8D6F5 0%, #E4E9F0 0%, #E4E9F0 100%);border-radius:3px;position:relative;overflow:hidden;cursor:pointer;}
+  .voice-player .pp-wave::after{content:"";position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(to right, #2E6BFF 0%, #5C8AFF 100%);border-radius:3px;}
+  .voice-player .pp-time{font-size:12px;color:#5A6B7F;font-variant-numeric:tabular-nums;min-width:78px;text-align:right;}
+  .voice-player .pp-label{font-size:12px;color:#8A99AB;margin-right:6px;}
+
+  .stat-row{display:flex;gap:14px;margin-bottom:14px;}
+  .stat-card{flex:1;background:#fff;border:1px solid #ECEEF2;border-radius:5px;padding:12px 16px;}
+  .stat-card .num{font-size:22px;font-weight:700;color:#1F2D3D;}
+  .stat-card .num span{font-size:13px;font-weight:500;color:#5A6B7F;margin-left:4px;}
+  .stat-card .lbl{font-size:12px;color:#8A99AB;margin-top:4px;}
+  .stat-card.total .num{color:#2E6BFF;}
+  .stat-card.pending .num{color:#FF7D00;}
+  .stat-card.pass .num{color:#00B42A;}
+  .stat-card.reject .num{color:#F53F3F;}
+</style>
+</head>
+<body data-page-node-id="bvbVJMlRdFCQOu2sVkOssv">
+
+<div class="demo-bar" data-page-node-id="hMWwqH8NjQSJQMtttHPXUr">
+  <span class="tag" data-page-node-id="tyEPaABYLzAQW4AzNRXhw9">原型 v2（按截图还原机器列表） · 顶部切换双端 · 数据为模拟</span>
+  <div class="seg" data-page-node-id="BL60BxA5aMmXhDMJkf3Tzc">
+    <button id="swCustomer" onclick="switchApp('customer')" data-page-node-id="myVrWAYPMO6gmMGFBJcwVh">客户PC端</button>
+    <button id="swOs" class="active" onclick="switchApp('os')" data-page-node-id="1FVFYAo75CHMStnGdEbRK6">OS后台</button>
+  </div>
+  <button class="dl-btn" onclick="downloadReqDoc()" data-page-node-id="4LvHXvt2Gnujc3XV06eEej">需求说明</button>
+</div>
+
+<!-- ==================== OS 后台 ==================== -->
+<div class="app" id="appOs" data-page-node-id="byS967rm7I175UevC0w17V">
+  <div class="topbar" data-page-node-id="4DXheIexzsKKTPptMPJbHD">
+    <div class="logo" data-page-node-id="AuCYL11iN1QPGHvajw34RU"><div class="ic" data-page-node-id="mI7il4uOIDs0Scw4jPiDd0">鹅</div><span data-page-node-id="9u5bMmVBKHY4leKnJxCx1f">大黄鹅</span></div>
+    <nav class="nav" data-page-node-id="E7pgmFtWgAEoCBAn67ByCz">
+      <a class="active" data-page-node-id="AUTC84X4Te6jdK38N2NmEh">售后机运营</a>
+      <a data-page-node-id="gRAGX58qSxZxA6xcZcGsxD">供应链中心</a>
+      <a data-page-node-id="Ehb18Es1fviUPXDNrXpM2X">营销中心</a>
+      <a data-page-node-id="33Cs0S3kVo6XXFgOGVAHak">服务商管理</a>
+      <a data-page-node-id="lE2PRE2pkc2ORrRWLcAEKU">AI管理系统</a>
+      <a data-page-node-id="PqrzN8N1yX8X7TM4wkcHan">生产管理</a>
+      <a data-page-node-id="qJai1XaKRjKJI4wIYbvSDF">云盘守</a>
+      <a data-page-node-id="STAbHEqXwkeO9t7vYt8xe3">更多 <span class="arr" data-page-node-id="MLJ4tpBgHU8t0VCl8RfOCY">▾</span></a>
+    </nav>
+    <div class="right" data-page-node-id="6VHEDYunt0mgbFSsnq2mCM">
+      <span class="icn" data-page-node-id="UQcPyh1K5jPeeZJbVXLIXg">⊟</span>
+      <span class="icn" data-page-node-id="b5OnLNFzYjiuxPCVeG94fj">🔔</span>
+      <span class="icn" data-page-node-id="8YsoXk9LSi3CC6S1x4T9sP">💬</span>
+      <span class="icn" data-page-node-id="XcGgyJBEKqAGtffpX0ZjGB">⚙</span>
+      <span class="lang" data-page-node-id="PTDym8EB4IRLapCghGY104">中文 <span class="arr" data-page-node-id="tJJVt0ZTeo8fBjp92cGpcI">▾</span></span>
+      <span class="user" data-page-node-id="jZdaboyo0Bh9xPixdZitJn">王泳瑜<div class="avatar" data-page-node-id="7d7LAuLl4CAT0GmT23XH9g">王</div></span>
+    </div>
+  </div>
+
+  <div class="body" data-page-node-id="TVBHYLQrCtV8PTappSDqgE">
+
+    <!-- 侧边栏 -->
+    <aside class="sidebar" data-page-node-id="9HWlT9unL4PHhchJDEDBxG">
+      <div class="mi" data-page-node-id="CVEOQD7lHh41cHvCEJVVy8"><div class="ic" data-page-node-id="2MWBEEBAcHDyItJPVhXZoT">⌂</div>首页</div>
+      <div class="mi parent active" data-page-node-id="eFI9esPMyQWZmLjdlcAr4t"><div class="ic on" data-page-node-id="DiP0CvvYBLWAM3BPcITBDj">▦</div>机器 <span class="new-tag" data-page-node-id="HxKQIeMPU5ERiK5z0DbuG4">语音</span></div>
+      <div class="sub" data-page-node-id="IuS0ScZeHY98md9GMPPbcA">
+        <div class="mi" id="osMenuList" onclick="showOsPage('machine')" data-page-node-id="cvszR6JzBi9F0RId2Wit42">机器列表</div>
+        <div class="mi active" id="osMenuVoice" onclick="showOsPage('voice')" data-page-node-id="CFMne97EDhuHnuWJoEPnsb">语音管理 <span class="new-tag" style="margin-left:auto;" data-page-node-id="ozhjQJk4AkqB2LCEFKtA3e">新</span></div>
+        <div class="mi" data-page-node-id="mWXcPUwARNxhREm7BRf0aP">拒测机机器</div>
+        <div class="mi" data-page-node-id="HR4Dqis4wbK3T5kaGZ2sQW">拒测机列表</div>
+        <div class="mi" data-page-node-id="afrxzVR4fug9c6K6qbpaGm">设置选项</div>
+        <div class="mi" data-page-node-id="vbpZstZmg563vPmgVcQc1t">批量机型</div>
+      </div>
+      <div class="mi" data-page-node-id="2l5Rb8DI7ZCpWeCpvC6qWJ"><div class="ic" data-page-node-id="lv4gX937mOi1ZGmevSFpU2">#</div>编号管理</div>
+      <div class="mi" data-page-node-id="rM2zwTDuAtAr9tA4rYbVFv"><div class="ic" data-page-node-id="CXbLAcA99pajZmxEGlmzda">▢</div>广告机</div>
+      <div class="mi" data-page-node-id="Hd9vxDGAz9VqDxUOd6I3sf"><div class="ic" data-page-node-id="2DXzD2yyFRCjs2c5dLCNLy">⚙</div>机器配置</div>
+      <div class="mi" data-page-node-id="Acn0CyxcNEYWr8A3nTF8n2"><div class="ic" data-page-node-id="IQ16HturxwKwoWLynk2YXc">🎨</div>装修管理</div>
+      <div class="mi" data-page-node-id="EnkrwMHToaoYwsXbeZEuBt"><div class="ic" data-page-node-id="oG28SvC9Epg6Yf19my5G8U">◉</div>点位标签</div>
+      <div class="mi" data-page-node-id="242OoELiq9Bn37zZ9lhbED"><div class="ic" data-page-node-id="MCC7XnO2ycFliGgZ82N9UX">≡</div>物联网卡管理</div>
+      <div class="mi" data-page-node-id="fLDhDFzSWawV2mNTSNjPrJ"><div class="ic" data-page-node-id="a0YZT2AbHZfpcYyNM9GDW9">⊕</div>政策入驻</div>
+      <div class="mi" data-page-node-id="srNtzjwvNJKo4PGZGU7Grl"><div class="ic" data-page-node-id="LAZqyEInaTXfckXt4mj4cx">⇆</div>流量管理</div>
+      <div class="mi" data-page-node-id="2YbX6B1CviLXwbpp69tvFl"><div class="ic" data-page-node-id="CWmNbykDuc7Yy5ej4RIcXL">▤</div>商品管理</div>
+      <div class="mi" data-page-node-id="L0D3SC5UUqF3FDQUHfvRmE"><div class="ic" data-page-node-id="eLS3D3iHebcnZwhx5ZJt8e">⛓</div>合作机组</div>
+      <div class="mi" data-page-node-id="avXOgSogpFMEhlqGmaNR0Z"><div class="ic" data-page-node-id="rPmk9SuVRn1BJnGMvHD71H">🏫</div>校园支付</div>
+      <div class="mi" data-page-node-id="Mpa6pbwfsXd396giSrDjn4"><div class="ic" data-page-node-id="cksKzNBE9JC9bor19TB6fX">📣</div>广告中心</div>
+      <div class="mi" data-page-node-id="klzG0CoklGlf9u5xGmZYu9"><div class="ic" data-page-node-id="AjeOIwmY9FsAtF3FYBG9Ss">👤</div>客户管理</div>
+      <div class="mi" data-page-node-id="TFu7a3rDdKVz3WPJjVRQPi"><div class="ic" data-page-node-id="LcupFugneglnb1ZltHLLeB">🎫</div>客服工单</div>
+      <div class="mi" data-page-node-id="TljWBdhDkYCtHYh8QhLtrj"><div class="ic" data-page-node-id="cTWm3PL1VDJP4yQYL1Omcs">🏭</div>生产进度</div>
+      <div class="mi" data-page-node-id="MXtofAdeiacG1DciItHoVT"><div class="ic" data-page-node-id="lofnnN53WCcJLOVVDyKi94">📊</div>统计分析</div>
+    </aside>
+
+    <!-- OS 后台：机器列表 -->
+    <main id="osPageList" style="display:none;" data-page-node-id="8vpHesnFaJMbC0NleASs8S">
+      <div class="crumbs" data-page-node-id="AJ5UyRi5FvObVD8EsTCC7k">当前位置：机器 / <b data-page-node-id="aBiOZ6FY6rRiDuQwy8UqLH">机器列表</b></div>
+
+      <div class="tabs" data-page-node-id="qNxNaze0ziuxb8wQK0QkRz">
+        <a class="active" data-page-node-id="tZ9XSZpni1l47JH0MuTw5C">全部机器</a>
+        <a data-page-node-id="WB93uO1U0SPEOKkhk7bBNN">售货机</a>
+        <a data-page-node-id="vRHI2YxHHP2BtcEPXleP9E">静小区</a>
+        <a data-page-node-id="8pOrN0MDXWWLv6r5NC7BMj">动态配EX</a>
+        <a data-page-node-id="FeI22HwxNrwxrelX9WIGu2">验小组</a>
+        <a data-page-node-id="yeji3V5NHsNEhqooO6VA7w">袋鼠柜</a>
+      </div>
+
+      <div class="card filter" data-page-node-id="Msarpqe62pM0xXbGqoGkmO">
+        <div class="row" data-page-node-id="IAGKnC2iS6nCCrj833Ccno">
+          <div class="field" data-page-node-id="QHKdk2muGz8730vAboidM8">
+            <label data-page-node-id="fHWQIFR97ucZMTsypwYDcV">客户名称</label>
+            <div class="ctrl" data-page-node-id="UpbcLhbk1UpBJyc9qDGHI5"><input type="text" placeholder="某某机器客(91)" data-page-node-id="z851GveMP8N2FNv9HC8THD"></div>
+          </div>
+          <div class="field" data-page-node-id="6gVBabmyPmDsC79mBOUpuV">
+            <label data-page-node-id="9hOpJxmWAlhC40ABVEo60A">名称/编号</label>
+            <div class="ctrl" data-page-node-id="aPR1GICcD3rGnS19uHUgEJ"><input type="text" placeholder="多编号搜索请用逗号隔开" data-page-node-id="6AV9Xi6znMQcpJhMSqnK9A"></div>
+          </div>
+          <div class="field" data-page-node-id="yimbaWrynmxh194zV4gSm4">
+            <label data-page-node-id="FgxQ5N2f6bvrk379L56WWG">在线状态</label>
+            <div class="ctrl sel" data-page-node-id="VcYB2FdgTIcQp07uLR5tCL">请选择</div>
+          </div>
+          <div class="field" data-page-node-id="gHtS7HBaiJVdMOJNlWbraC">
+            <label data-page-node-id="v9iG9T4o2xqS84bZtFQDz6">激活时间</label>
+            <div class="ctrl range" data-page-node-id="cLvYp3yfyS9C3OBOKtwfUa"><span class="cal" data-page-node-id="4XdXFzf1QYj6RUcX53Z7DH">📅</span><input type="text" placeholder="开始日期" data-page-node-id="JztYwsgI6lZ2GUId5h9xmz"><span data-page-node-id="pSLf2FcfzKimrz8RdODkjN">~</span><input type="text" placeholder="结束日期" data-page-node-id="mAyLDnZUPa6OGH4yXJ9y38"></div>
+          </div>
+        </div>
+        <div class="row" data-page-node-id="fEo5EIT6hQPzweBxvZFeSK">
+          <div class="field" data-page-node-id="5P5r1qTpGz9QnFZihBfnAB">
+            <label data-page-node-id="ek8HJHIUpzZAXfHdfth3fG">机器标签</label>
+            <div class="ctrl sel" data-page-node-id="u3vPchEuWoDSu2XvxYUfPf">请选择</div>
+          </div>
+          <div class="field" data-page-node-id="fWFrTIvqLlZH6fENqkuyHu">
+            <label data-page-node-id="6Aqz0ErI88gnR8xMMMNKrl">所属厂商</label>
+            <div class="ctrl" data-page-node-id="wxGU9GohgpFes7LDqPzzbk"><input type="text" placeholder="经销商：请输入商户名称搜索" data-page-node-id="WIlsfPm6k0EVY9awtrd0DA"></div>
+          </div>
+          <div class="field" data-page-node-id="GXXvPjUXPbbeukGqf3uXED">
+            <label data-page-node-id="Y8LFPyrE855pF6VHOqG8ii">机器地址</label>
+            <div class="ctrl sel" data-page-node-id="nsurxyOywl1SF7MMwU7wX3">请选择</div>
+          </div>
+          <div class="field" data-page-node-id="2m44q1JXXNCt9x1Kc2q8BB">
+            <label data-page-node-id="EHjPuWZrRAWbr4Fb7aDQHZ">机器类型</label>
+            <div class="ctrl sel" data-page-node-id="IxKrHDOBQkvvodxgPSFyQu">请选择</div>
+          </div>
+        </div>
+        <div class="actions" data-page-node-id="OXzWTCeJRIeP8bvjNkC6zm">
+          <button class="btn default" data-page-node-id="o8KFPhtHYcn96xLovAV4Uh">重置</button>
+          <button class="btn default" data-page-node-id="dEYpgHmG54YBS7h5l4QWuh">展开 <span class="arr" data-page-node-id="i9OliHj5O8kYMRcg08c3Yf">▾</span></button>
+          <button class="btn primary" data-page-node-id="CLtzLQZcgMVdphto9Vjlse">搜索</button>
+        </div>
+      </div>
+
+      <!-- 批量按钮 + 统计 -->
+      <div class="batch" data-page-node-id="y8OAy8nIEhKFk7hkm3jsU1">
+        <div class="l" data-page-node-id="AQXyPUOcAzEpZc6A14Uh2r">
+          <button class="btn default sm" data-page-node-id="LDOEdY64X2kz2lfIP6aQmh">授权客户</button>
+          <button class="btn default sm" data-page-node-id="VjAsxHTJzQ9RzB8Inp7oEm">授权广告</button>
+          <button class="btn default sm" data-page-node-id="PvPIHAB8bouNw6xbcvyzUe">开关点位</button>
+          <button class="btn default sm" data-page-node-id="I3fJQMFdtOhtADbmRsD4wW">广告屏蔽</button>
+          <button class="btn default sm" data-page-node-id="WDAWY7MAG1B7jUShC0V4Gr">服务调试</button>
+          <button class="btn default sm" data-page-node-id="CtQL3EtUg4qIndW9WXdmlE">导出</button>
+          <button class="btn default sm" data-page-node-id="jODXp0ACMURh8vVjGjGhyf">导出找货数据</button>
+        </div>
+        <div class="r" data-page-node-id="0LQM2TftD8XUkyBFytpJVl">
+          <span class="stat-total" data-page-node-id="jxU8iWdNSDNuX1O32DwBOD">机器总数：<b data-page-node-id="UBZ6O0XP275jVtEgSRKxhp">5604</b></span>
+          <span class="stat-online" data-page-node-id="N6wVtGrcx1RmrhFoNI3HR9">在线机器：<b data-page-node-id="fUan7Dq0BxewfzAVmlzEnK">2671</b></span>
+          <span class="stat-offline" data-page-node-id="rBAEGqjzvuAGNXUgGgPjdz">离线机器：<b data-page-node-id="U6l9yw9WgTL6qD38Ys8SkA">2933</b></span>
+        </div>
+      </div>
+
+      <!-- 数据表格 -->
+      <table class="grid" data-page-node-id="dYCMN0EAOqqtiScwhaDQ0n">
+        <thead data-page-node-id="JLMZO0KQeUUXDdV93flyet">
+          <tr data-page-node-id="c1r6cjZM1FNYsevXLRcJG0">
+            <th style="width:30px" data-page-node-id="RllDj499jOeEd66FiFFK3N"><input type="checkbox" class="check-all" onchange="toggleAllMachineSel(this,'os')" data-page-node-id="jIDW6hkqrLTgqWAl4KDcf3"></th>
+            <th style="width:90px;" data-page-node-id="eDcbC0DwMXsAIjBaEZ7LK7">机器编号</th>
+            <th style="width:80px;" data-page-node-id="yu2EEC4nS80xSuSDWGOMZu">机器类型</th>
+            <th style="width:70px;" data-page-node-id="NoU6kpJmzcYaKkEPNZLEpi">在线状态</th>
+            <th style="width:70px;" data-page-node-id="oOuyC92cDOxNvhuMRZsIvV">机器状态</th>
+            <th data-page-node-id="hG1Vo0tek6dJg2mpVOQemJ">机器名称</th>
+            <th data-page-node-id="gfWvdUzgumJZSD8TYg72Z3">客户名称</th>
+            <th style="width:80px;" data-page-node-id="xrufAAETf1C20Ep2M5zxu2">今日销售</th>
+            <th data-page-node-id="gU3fz7ZBqm3eZdcvaOFdPR">支付方式</th>
+            <th style="width:140px;" data-page-node-id="sZdxtiC69Hp6GRqPlhBiJH">激活时间</th>
+          </tr>
+        </thead>
+        <tbody id="gridBody" data-page-node-id="BVbfhBXu4fHogSRbN7Ryg6"></tbody>
+      </table>
+      <div class="pager" data-page-node-id="tK5CClYgH3xKIIX3cZUUaT">
+        <button data-page-node-id="GAgK1faRbPAXp4vLf1xMRn">全选</button>
+        <span class="txt" data-page-node-id="EQkcI16rGbEOE6Mf3OvoCq">共 5604 条</span>
+        <button data-page-node-id="KAe8aUqymaSa1WrN2qdwIF">‹</button>
+        <button class="active" data-page-node-id="wXyJSe9l9ZMqVzbMfYPYae">1</button>
+        <button data-page-node-id="ZMHQVqdp7oTBaAjExSljnN">2</button>
+        <button data-page-node-id="cQ5pscSg5MErL5fp7OK6xS">3</button>
+        <button data-page-node-id="MBe69hjxOjDVeva6DoTAOk">4</button>
+        <button data-page-node-id="X6PHPaCH2BPPZQCyawkc4M">5</button>
+        <span class="txt" data-page-node-id="1Tki1mkJh3HXDJFindWpPa">...</span>
+        <button data-page-node-id="BKDPELUHjUWDaIA7sJv4bG">374</button>
+        <button data-page-node-id="2H1FFRGZAfF0SjzoQzjYEi">›</button>
+        <select style="height:28px;border:1px solid #DCE0E6;border-radius:3px;font-size:12px;color:#5A6B7F;padding:0 6px;margin-left:6px;" data-page-node-id="m5BwTPPJUSOPJPsdf2C1j8">
+          <option data-page-node-id="32Gf59ujtgX3JyVZgXAozH">10条/页</option><option data-page-node-id="RKI2MIWhQcHan2aRDRdONo">20条/页</option><option data-page-node-id="1Ewe30Pf1V1MBsmv6SX6y4">50条/页</option>
+        </select>
+      </div>
+    </main>
+
+    <!-- OS 后台：语音管理（OS 视角，看所有客户的语音素材库） -->
+    <main id="osPageVoice" class="page-os-audit" data-page-node-id="fw9kbwDoyYHzA4O9NAWSlE">
+      <div class="crumbs" data-page-node-id="wo7tNFQoHXX530xG5zhq6M">当前位置：机器 / <b data-page-node-id="VRyWKgusbXisEaaASAbUrH">语音管理</b></div>
+
+      <div class="info-banner" data-page-node-id="Mgirqj9l0lrzqSkfMPFY70">
+        <span class="bi" data-page-node-id="2bNfLRZnMmCLqVdwk7yIOK">ℹ</span>
+        <span data-page-node-id="rtmf1DZGHmQH3kAqJj5vYy">语音素材审核，审核通过后客户可推送给机器。</span>
+      </div>
+
+      <div class="card filter" data-page-node-id="ke13GqQRrOKuILrubHODLL">
+        <div class="row" data-page-node-id="6KsFMGyVkwvywGl5ZwABsT">
+          <div class="field" data-page-node-id="2H4nNrciVUfMJeK3FlFVFA"><label data-page-node-id="hAVOupRjxfPGhpeoT29N2c">商户名称</label><div class="ctrl sel" data-f="merchant" onclick="toggleOpt(this)" data-page-node-id="dp0HmlI6k0Tl8YRPgKoDnJ"><span class="sel-txt" data-page-node-id="HGNA14hRJsR41Rj5FjdZEf">请选择</span><div class="opt-list" onclick="event.stopPropagation()" data-page-node-id="G8M1dXLtByaZWDmMnqHHDb"><div data-v="" data-page-node-id="gm0DO2e5JL9m0o5Sm9GTEi">全部商户</div><div data-v="深圳市XX贸易有限公司" data-page-node-id="Joabw31r8ecAvvEK7kGCJq">深圳市XX贸易有限公司</div><div data-v="广州YY便利店" data-page-node-id="7GdYQJSeOO3uDP4yzwsXjo">广州YY便利店</div><div data-v="办公室测试机构" data-page-node-id="1WtJ9gbgolcohQGIvc2hS7">办公室测试机构</div></div></div></div>
+          <div class="field" data-page-node-id="wYk1rtuTFX0XWdkHLEf1jt"><label data-page-node-id="RIP14fGFw9H1z6H9i4ZxlC">状态</label><div class="ctrl sel" data-f="status" onclick="toggleOpt(this)" data-page-node-id="OpMlwDi9doPH6YC2HXy0Gy"><span class="sel-txt" data-page-node-id="C3OuiMoeOWWam1CH7CjKnc">请选择</span><div class="opt-list" onclick="event.stopPropagation()" data-page-node-id="bdEHFWZE7pbRhGaLZbk7Cs"><div data-v="" data-page-node-id="AysuwBcXhT9ATlprHvg4KA">全部状态</div><div data-v="pending" data-page-node-id="2wzvB7dPaCX8n50omGITp7">审核中</div><div data-v="pass" data-page-node-id="g2BAFBkAAgyTLoW0edoWai">已通过</div><div data-v="reject" data-page-node-id="uQa3XCSGOO89s6VUS9vTkN">已驳回</div></div></div></div>
+          <div class="field" data-page-node-id="DKh3w8K0NAY8vgCWTx7O4Y"><label data-page-node-id="r4SapMAQFBXXMgOZR54Dlb">语音名称</label><div class="ctrl" data-page-node-id="LzXsya5N10FAzfUbiYKlov"><input type="text" placeholder="搜索语音名称" data-page-node-id="0JwERZ1n5GsdS4ICHCzMt8"></div></div>
+          <div class="field" data-page-node-id="WtHItUFtRAtl66vRKevbVG"><label data-page-node-id="vvuWy7WlmqCbue1ZuChFTE">上传时间</label><div class="ctrl range" data-page-node-id="RuxEUSf8NC2BcpamQeEqSp"><span class="cal" data-page-node-id="4XHuYrXI0mzQUzjUZxCb1L">📅</span><input type="text" placeholder="开始日期" data-page-node-id="BKcdAGAHRp3DQ5VsDPtOQV"><span data-page-node-id="23nYv0dF4uqYq8EazX43Mq">~</span><input type="text" placeholder="结束日期" data-page-node-id="XuxOxmdXHs0LXultAwm7Vl"></div></div>
+        </div>
+        <div class="actions" data-page-node-id="GIniAZyrICeT7X4LqW7kqF">
+          <button class="btn default" onclick="resetAuditFilter()" data-page-node-id="pwrX72JU8HnRKGIch7WDb0">重置</button>
+          <button class="btn primary" onclick="applyAuditFilter()" data-page-node-id="d10u9S4GdxAfZvs1Vn8WGy">搜索</button>
+        </div>
+      </div>
+
+      <table class="audit-table" data-page-node-id="NbJTqeoPHN5lLHZUijU6Bc">
+        <colgroup data-page-node-id="34kWyIZx7r5K4my89LooO1">
+          <col style="width:130px" data-page-node-id="vDOq5HYA91qwmh8FDh2Bis"><col style="width:100px" data-page-node-id="9AaVv30JSI5UW4YFy6DDHK"><col style="width:90px" data-page-node-id="2Y7O7b7b7b7b7b7b7b7b7b8"><col style="width:50px" data-page-node-id="pKHovGEFAhhIf37oQXDseD"><col style="width:60px" data-page-node-id="yOKFqYq7YvUGMLbFYNLVrR"><col style="width:70px" data-page-node-id="lJBB7Zodhd4XGN3HJC11ep"><col style="width:220px" data-page-node-id="aPbv5G0Ox7XhRxA3EBlJk1"><col style="width:130px" data-page-node-id="k7qaNq9cAiTVjL7gz68TLV"><col style="width:80px" data-page-node-id="PVAZkt54T1aF63jVg3kap4"><col style="width:90px" data-page-node-id="4FPC8TSDbpqJWlkWWYwgYk">
+        </colgroup>
+        <thead data-page-node-id="P0daTiN5VDduQfriUAMQJy">
+          <tr data-page-node-id="QhDIjIwkwCr8NjnT9lKnoy">
+            <th data-page-node-id="EIfv6vJZtVQz4tnE49ynEZ">商户名称</th>
+            <th data-page-node-id="wAjCAsYG0kaJ0xfuw9tTDr">语音名称</th>
+            <th data-page-node-id="jKR0oqSEOk6yh5sQ5zPHE42">播报场景</th>
+            <th data-page-node-id="jKR0oqSEOk6yh5sQ5zPHE4">试听</th>
+            <th data-page-node-id="Q93NnXyeFsRmI55gG8MU6B">时长</th>
+            <th data-page-node-id="QQ2Pc250ldg1uHijjA4Rak">大小</th>
+            <th data-page-node-id="npZJ9Gxzm1mLurFC0JZIoT">内容说明</th>
+            <th data-page-node-id="f0DLNTi37CTr9cAkZ7OCUK">上传时间</th>
+            <th data-page-node-id="SWjGrE7GkSavGLOrMrim4p">状态</th>
+            <th data-page-node-id="uyhaRiXK6TGuko2rfmhRdH">操作</th>
+          </tr>
+        </thead>
+        <tbody id="auditTbody" data-page-node-id="mGCJfISWEA4Hu0pCftexGM"></tbody>
+      </table>
+      <div class="pager" data-page-node-id="hV6hya4tcXet1VLrpOaKQm">
+        <span class="txt" data-page-node-id="OAqFSfTjPLwYSVMgVoQYkI">共 2 条</span>
+        <button data-page-node-id="ab9F2dtsiH7wUbhr2zpI9v">‹</button>
+        <button class="active" data-page-node-id="wpipnk8y3Mvro0RG8K4UPC">1</button>
+        <button data-page-node-id="WibE27ZZ2phsJpAgSGFKmN">›</button>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<!-- ==================== 客户PC端 ==================== -->
+<div class="app hidden" id="appCustomer" data-page-node-id="02wAt7kkCjrJMEESHAJ4rm">
+  <div class="topbar" data-page-node-id="T46qZ472L4erHKFDjH9BAO">
+    <div class="logo" data-page-node-id="A7viyrHuaqC4ywI8q0cSDt"><div class="ic" data-page-node-id="9owmbQsAUYrtBsRaXAlaPt">鹅</div><span data-page-node-id="cl8D5AbhlO5HJdH6IIfkJB">大黄鹅</span></div>
+    <nav class="nav" data-page-node-id="Mk7VUvNVWeF8MA9rq0uN0N">
+      <a class="active" data-page-node-id="pOXcWPDdfyvUoAHA5lxP50">售货机运营</a>
+      <a data-page-node-id="5PJHusTmyuHoxuSq6l8zu9">结算中心</a>
+      <a data-page-node-id="SH1idbGKkaWDuMpz0eqafz">大黄鹅服务商</a>
+      <a data-page-node-id="1mAOttkO0gA067avhsJh5a">进销存平台</a>
+    </nav>
+    <div class="right" data-page-node-id="TDyPwgY8HnAAMzN9xV4V6L">
+      <span class="icn" data-page-node-id="LCWcoPvCPBg2OpTI2BtnOm">⊟</span>
+      <span class="icn" data-page-node-id="zD27TpxkAM656Has9yRXhM">🔔</span>
+      <span class="icn" data-page-node-id="G4dQYI6hgHkr2HNiHPX8L0">💬</span>
+      <span class="lang" data-page-node-id="wCXzlUfODiwto4iIABR29L">中文 <span class="arr" data-page-node-id="lIMRtyHZ4Z8OINHh6uPQdK">▾</span></span>
+      <span class="user" data-page-node-id="wLPAJrttmqt2XxY7BtiYaK">深圳市XX贸易有限公司<div class="avatar" data-page-node-id="G5qeS5uHhAQO694oSqWv05">商</div></span>
+    </div>
+  </div>
+
+  <div class="body" data-page-node-id="30dfET6B4DXR9houhFpQXK">
+    <aside class="sidebar" data-page-node-id="Pgn2sAN7FyjIsscpC5Ek9t">
+      <div class="mi" data-page-node-id="RSjEdEiow95dbCnC5zYmoZ"><div class="ic" data-page-node-id="VMlETrk3aI5ILZCz5K2LMF">⌂</div>首页</div>
+      <div class="mi parent active" data-page-node-id="I87oBstEAj0RQSLtMlpc8P"><div class="ic on" data-page-node-id="M5ZHeU8uHO7zLgoQGrnV22">▦</div>机器</div>
+      <div class="sub" data-page-node-id="EIOeHuTJ2h1jFForFzeKo0">
+        <div class="mi active" onclick="showCustomerPage('machine')" data-page-node-id="qcwTMEOuttg5NsrCXeVHq6">机器列表</div>
+        <div class="mi" onclick="showCustomerPage('voice')" data-page-node-id="iWyvpgo0Ye93bhu3tD8dBk">语音管理 <span class="new-tag" style="margin-left:auto;" data-page-node-id="fxCYoikQgqA2ncYwUU2uWr">新</span></div>
+      </div>
+      <div class="mi" data-page-node-id="2mdmUOf3fB8QgqtxNWZE93"><div class="ic" data-page-node-id="LQRXSRl3VaEQMhmnntwAZg">⛓</div>合作机组</div>
+      <div class="mi" data-page-node-id="pXsaI3o9teCyrplYmfzIvK"><div class="ic" data-page-node-id="pdL37vM3HvO5DhVpuZyd4t">📊</div>统计分析</div>
+      <div class="mi" data-page-node-id="CXSBVasvKlu2hy6DeOf7jC"><div class="ic" data-page-node-id="okHCFOlXzDtdsqt818dQBH">▤</div>商品管理</div>
+      <div class="mi" data-page-node-id="7cqqNBLypQrll3woHWbB5M"><div class="ic" data-page-node-id="DvGBgaaBreFhVW1ugZLJfg">📣</div>广告管理</div>
+      <div class="mi" data-page-node-id="UCp74qfOAQl4y2SVzPq0kf"><div class="ic" data-page-node-id="eMvqR31TVKvbMwozD3ZFZf">⚙</div>运营管理</div>
+      <div class="mi" data-page-node-id="8iCwysDiG7ypWa5sXusID8"><div class="ic" data-page-node-id="JUARNmjCKBQGZjIW9WyJmD">💰</div>结算中心</div>
+      <div class="mi" data-page-node-id="wceDlctD0GhrdurQFzXku9"><div class="ic" data-page-node-id="riZxB3niEJ87PAXnBbiobg">🔋</div>充值管理</div>
+      <div class="mi" data-page-node-id="m8PYCGFOGF7qAu77YNEos4"><div class="ic" data-page-node-id="9zFuSEzNg7EzNWKp150AX6">🔐</div>权限管理</div>
+      <div class="mi" data-page-node-id="hPN4z5SH7AsONNu2R3M7GB"><div class="ic" data-page-node-id="ukkvwTnkyK7zup1Y2nKDdQ">⚙</div>系统</div>
+    </aside>
+
+    <!-- 客户机器列表 -->
+    <main id="customerPageMachine" data-page-node-id="uY9dOCu2GTC4a9BlVOQbOK">
+      <div class="crumbs" data-page-node-id="sMyYQgSulSieTytVbm3yZC">当前位置：机器 / <b data-page-node-id="hHOY0sKiXLObC4lb4CxBfh">机器列表</b></div>
+
+      <div class="tabs" data-page-node-id="CUrGFsyrkBGYnF6u47bbZJ">
+        <!-- v8.56：5 个 tab 与真实业务对齐（全部机器 / 售货机 / 静态柜 / 动态柜X / 鹅小柜）；默认选中「鹅小柜」；推送语音仅在「鹅小柜」tab 下出现 -->
+        <a id="custTabAll"    onclick="setCustomerTab('all')" data-page-node-id="GYwB1m1lvHiXbrUUf5vGCa">全部机器</a>
+        <a id="custTabSale"   onclick="setCustomerTab('sale')" data-page-node-id="tl2nsEA20NaqMQQn6laNSj">售货机</a>
+        <a id="custTabStatic" onclick="setCustomerTab('static')" data-page-node-id="nSsELHwe1juUNbkbhdYTpi">静态柜</a>
+        <a id="custTabDynamic" onclick="setCustomerTab('dynamic')" data-page-node-id="SljB50zLePQRCwf5oThCpX">动态柜X</a>
+        <a class="active" id="custTabGoose"  onclick="setCustomerTab('goose')" data-page-node-id="lhD4bkbinWzpuI8kGEC9vo">鹅小柜</a>
+      </div>
+
+      <div class="card filter" data-page-node-id="AQjCgOWlypKl2naysVePYh">
+        <div class="row" data-page-node-id="bpzrWt0qYX0ohV2CijFucy">
+          <div class="field" data-page-node-id="bQEUe97z5OVhKtw0vb1D5J"><label data-page-node-id="qpKPdiigfGaNOQUdaQiI9T">组织机构</label><div class="ctrl" data-page-node-id="LxLZ5kZjs1BnBQd7hklCTK"><input type="text" value="办公室测试机构" data-page-node-id="P9kptczCEwnwyYsNhUj5Gx"></div></div>
+          <div class="field" data-page-node-id="wdDROlfyGHBbulEBuQCOgX"><label data-page-node-id="rnYFOKGFa3DZ3FW859qrKf">名称/编号</label><div class="ctrl" data-page-node-id="AhdjEFZX6S6zaPU19o9iz0"><input type="text" placeholder="多编号搜索请用逗号隔开" data-page-node-id="7DDCHWADmpin0HtUKoTdNS"></div></div>
+          <div class="field" data-page-node-id="KFhCH2YXchNfVEnJgAeVjX"><label data-page-node-id="4uvUm9W20BZM9gPP6ugaIE">在线状态</label><div class="ctrl sel" data-page-node-id="F6bBJBp8RvKaJOCklJ5z8Y">请选择在线状态</div></div>
+          <div class="field" data-page-node-id="Ihz8wtY7kQlla1VeZJu5JB"><label data-page-node-id="6tLWUAQGOqvuqm0cGrYx55">激活时间</label><div class="ctrl" data-page-node-id="rJOZtdIy4Tgw5pUMgql425"><div class="ctrl" style="display:flex;align-items:center;gap:8px;" data-page-node-id="TXupwshZ9YNSGoWd5lfD89"><span class="cal" data-page-node-id="aBHLjGNYjyAQOAkdLfmBXi">📅</span><input type="text" placeholder="开始日期" style="width:90px;" data-page-node-id="GOS1HvPbuaP68oByGE7Kxy"><span style="color:#8A99AB;" data-page-node-id="EXZTptDDtHhE3npFHD57Dt">~</span><input type="text" placeholder="结束日期" style="width:90px;" data-page-node-id="XbXYVNOAAEuWkTzcPPB8ZD"></div></div></div>
+        </div>
+        <div class="actions" style="justify-content:flex-end;gap:8px;" data-page-node-id="JiKPYfEu5cIUuAYewUGHHZ">
+          <button class="btn default" data-page-node-id="NILRkGHnH8CBimcFE5yDYt">重置</button>
+          <button class="btn primary" style="background:#2E6BFF;color:#fff;border:none;" data-page-node-id="ys7MrbvZMknr0fjZli8Qpy">搜索</button>
+        </div>
+      </div>
+
+      <div class="batch" data-page-node-id="oSveu9uq6o7EM0Lz0myBED">
+        <div class="l" data-page-node-id="oHcCPkvDRZvirWUO4qiDBi">
+          <button class="btn default sm" data-page-node-id="GnepyxPMEg1hJGsRhquh5m">授权客户</button>
+          <button class="btn default sm" data-page-node-id="7ylpgSEMWrboYl5AljA9la">广告屏蔽</button>
+          <button class="btn default sm" data-page-node-id="vMHqk0gQaWYkiCL5bwcqPC">上架新品</button>
+          <!-- v8.56：仅在「鹅小柜」tab 下显示（默认隐藏） -->
+          <button id="pushBatchBtn" class="btn sm" style="background:#FFF1F0;color:#FF4D4F;border:1px solid #FFCCC7;display:none;" onclick="openPushBatchChecked()" data-page-node-id="FZB5jkxGaTDZLqqKKFaB9F">推送语音</button>
+          <button class="btn default sm" data-page-node-id="ufwdS0YYYkl1sTWZaEBBIt">导出</button>
+        </div>
+        <div class="r" data-page-node-id="HRtFUt5vd6JjOlVWCcOUIE">
+          <span class="stat-total" data-page-node-id="A26KZvpOmzHovLcfuUHGgk">机器总数<b data-page-node-id="AVo6qtZtBr1lFjUk7mMsi5">5229</b></span>
+          <span class="stat-online" data-page-node-id="g7DW0GzCC9R8WP6q8SHSkX">在线机器<b data-page-node-id="Fb1P7TEPS4MGhCV87bJar3">49</b></span>
+          <span class="stat-offline" data-page-node-id="YE8lEMLpVik8Ef4DnVA18t">离线机器<b data-page-node-id="licB7miOy4PXt7xplTIszn">5180</b></span>
+        </div>
+      </div>
+
+      <table class="grid" data-page-node-id="wlyAkD7BrsBH8y7gswoeh5">
+        <thead data-page-node-id="LehsTXdXxkvCU6HZ6L8LUl">
+          <tr data-page-node-id="AV26iuiFRpyLpzKXiwgvwr">
+            <th style="width:30px" data-page-node-id="YEbY2NM7N9Yoa7gNxPRH8w"><input type="checkbox" class="check-all" onchange="toggleAllMachineSel(this,'customer')" data-page-node-id="jmbGyhmEvOSiJMM2lFHV8r"></th>
+            <th style="width:90px;" data-page-node-id="A9dsf0ndMvIUADZigDVpwF">机器编号</th>
+            <th style="width:80px;" data-page-node-id="aknfgsjmFMUQ1FgHBUqo6v">机型</th>
+            <th style="width:70px;" data-page-node-id="ICtAtCDO1QQOoPvSvj35sE">在线状态</th>
+            <th style="width:70px;" data-page-node-id="kMRICFDRqaoTBNtKskoFJV">机器状态</th>
+            <th data-page-node-id="RJwESHm6RX6xcAcjTGhTET">机器名称</th>
+            <th data-page-node-id="kyf9SvMloloEHh1IwEl0DK">商户名称</th>
+            <th style="width:80px;" data-page-node-id="5R7O1D38sivAr5B0EVdasA">今日销售</th>
+            <th data-page-node-id="JFrk7PyrMo9uzRAsFpxPS6">支付方式</th>
+            <th style="width:140px;" data-page-node-id="6wf20LRuhAj96GOg9QyGEr">激活时间</th>
+          </tr>
+        </thead>
+        <tbody id="customerGrid" data-page-node-id="sWlVGpxJiJ5ocE8o3tKICH"></tbody>
+      </table>
+      <div class="pager" style="justify-content:space-between;" data-page-node-id="BOylAYqK0ZKeeRVTvSFL6u">
+        <div data-page-node-id="km10P1cSlGIiiXeh2DyXPQ"></div>
+        <div data-page-node-id="EpkR9nYC7KTTxf1YsAN1dj">
+          <button onclick="selectAllCustomer()" data-page-node-id="kBEn4dfPqXCcVqTrlDFF3V">全选</button>
+          <span class="txt" data-page-node-id="3eJX8lTQH5sVRNXdJLA2DY">共 5229 条</span>
+          <button data-page-node-id="9N1juAGDXHOrdRFb6iGEkA">‹</button>
+          <button class="active" data-page-node-id="ClSraM1OFAdwjwi37adRRq">1</button>
+          <button data-page-node-id="WQ8XJSs2xCSTCY7B01TJhx">2</button>
+          <button data-page-node-id="tpRUw8gWDdqHslpZOvPT6f">3</button>
+          <button data-page-node-id="4IcVGp80mnEkj5sUKXnGjb">4</button>
+          <button data-page-node-id="fAtv2pDg7PD1OQkvgwxKEP">5</button>
+          <span class="txt" data-page-node-id="z1203lc9WP462nBHKNZiem">...</span>
+          <button data-page-node-id="HuHVIL15AMaIM1uCH77sUd">523</button>
+          <button data-page-node-id="nluAZTqxRem8SH1I3jL6FD">›</button>
+          <span class="txt" style="margin-left:10px;" data-page-node-id="p1Z0McG7nALz4y7PCIGDnY">跳转</span>
+          <input type="text" style="width:38px;height:26px;border:1px solid #DCE0E6;border-radius:3px;text-align:center;font-size:12px;" data-page-node-id="hUkdNShzcyoC04ADThKW15">
+          <span class="txt" data-page-node-id="6FwvXNZTeibUlZl8sDFfij">页</span>
+          <select style="height:26px;border:1px solid #DCE0E6;border-radius:3px;font-size:12px;color:#5A6B7F;padding:0 6px;margin-left:6px;" data-page-node-id="sU6ez89FH6bL2mtUQ0MoMo">
+            <option data-page-node-id="OPgz3L7dt27wfBWubGwC22">10条/页</option><option data-page-node-id="bIu00d5LyqcGQqzowaKBtw">20条/页</option><option data-page-node-id="bLTCqH0DvHhkP6E2BkydEi">50条/页</option>
+          </select>
+        </div>
+      </div>
+    </main>
+
+    <!-- 客户语音管理 -->
+    <main id="customerPageVoice" style="display:none;" data-page-node-id="V98wtsxkyofQd8eBIttvsm">
+      <div class="crumbs" data-page-node-id="IlGqNr9OCT6iE6Op5XTbgG">当前位置：机器 / <b data-page-node-id="8qImDq3k7H0ohDj5qa8gwB">语音管理</b></div>
+      <div class="info-banner" data-page-node-id="CGc4J9ChheLH1Y2pIUVgzu">
+        <span class="bi" data-page-node-id="XYhFwNbU2ckniEn8XcVZar">ℹ</span>
+        <span data-page-node-id="0hKGpPRe6wSCPio31cM2As">上传语音，提交后由客服审核，审核通过后可推送给机器。</span>
+      </div>
+
+      <div class="batch" data-page-node-id="0KHrSdde0DMx7SqTHEYIMk">
+        <div class="l" data-page-node-id="EdYGGooYH2jXhOKSUL2gQu">
+          <button class="btn" style="background:#2E6BFF;color:#fff;" onclick="openModal('uploadModal')" data-page-node-id="r6ICQqLD8RezUqqZl6LjOv">上传语音</button>
+        </div>
+        <div class="r" style="font-size:12px;color:#8A99AB;" data-page-node-id="dgkmBXoG9xK5wjRuGfPz4r">wav 格式 · 单文件 ≤ 10MB · 时长 ≤ 60s · 仅开门柜支持 · 对应场景触发时播放一次 · 离线机器不可推送</div>
+      </div>
+
+      <table class="grid" data-page-node-id="M0mUbZaDJpcOTUn4QVoClM">
+        <thead data-page-node-id="lvzPwEdWWx6tmFAZRNFsiG">
+          <tr data-page-node-id="nWfGZNpflxWe7c841AexBq">
+            <th data-page-node-id="Cfhn17kEvdGZUfAT773z9L">语音名称</th>
+            <th data-page-node-id="YgAJ7jhbkmI1Kz2LiL28IA">播报场景</th>
+            <th data-page-node-id="GpaEAi8FN69gTQNgbnmJxp">试听</th>
+            <th data-page-node-id="379W9wyOe50vX4Q4C9lyxD">时长</th>
+            <th data-page-node-id="tClPM4ynItH8uNeY9Pj8zE">大小</th>
+            <th data-page-node-id="AkxtkqEePq9cRPAVKVe9Z8">上传时间</th>
+            <th data-page-node-id="QYNCtKxnXWvvOzUdgyAenh">审核状态</th>
+            <th data-page-node-id="kFifxHM0qvt1LqANTmppul">已推送机器</th>
+            <th style="width:200px" data-page-node-id="kFifxHM0qvt1LqANTmppul2">操作</th>
+          </tr>
+        </thead>
+        <tbody id="voiceTbody" data-page-node-id="KsHxITpy5LdiDimuhMVCG2"></tbody>
+      </table>
+      <div class="pager" data-page-node-id="NHFWK1zm6DP0qI5nmMMQsh">
+        <span class="txt" data-page-node-id="DprMRQ7DPXHd60kG3d7Xk5">共 5 条</span>
+        <button data-page-node-id="P3uG9B3m6Ro8wwM38djJeV">‹</button>
+        <button class="active" data-page-node-id="DODa2mh6pCjQw7M1iBTbF7">1</button>
+        <button data-page-node-id="kzbAjmZG2elUkOWr4SBUHH">›</button>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<!-- ==================== 弹窗 ==================== -->
+
+<!-- 上传语音 -->
+<div class="mask" id="uploadModal" data-page-node-id="wdltUwx7Tem5AaG1VYJyHC">
+  <div class="modal" data-page-node-id="hwlFQoZsJdDzeyJOYBpj5U">
+    <div class="mh" data-page-node-id="TuqdBbDXE23KSM4PdMbNEz"><h3 data-page-node-id="PGF1kTR73hDOAJDRkJ9iNn">上传语音</h3><button class="x" onclick="closeModal('uploadModal')" data-page-node-id="ELLHcD8yrd0Xfx32JTrWcY">×</button></div>
+    <div class="mb" data-page-node-id="jF0iyYjlh6xqFirVNRdjXV">
+      <div class="form-item" data-page-node-id="WHQLLpoutbDdrdYA7fmKHV">
+        <label data-page-node-id="ntsJQetvUmB2bIIpHEePM4">语音名称 <span class="req" data-page-node-id="1L2dOPSavoYVruPOFxpDqV">*</span></label>
+        <input type="text" id="voiceName" placeholder="例：欢迎光临优惠活动" data-page-node-id="VeboyN2koyRkRkjVSMtXDe">
+      </div>
+      <div class="form-item" data-page-node-id="Sc7nQe2vXbLd4kTzR8mYpA">
+        <label data-page-node-id="Bq4wVn9sZtEe6uLmH3xKjN">播报场景 <span class="req" data-page-node-id="Yd8fRm2pLqWv7cBnT5sHgZ">*</span></label>
+        <select id="voiceScene" data-page-node-id="Ke3xTn7bVcRq9wMzJ6uYdL">
+          <option value="">请选择播报场景</option>
+          <option value="开门成功">开门成功</option>
+          <option value="关门成功">关门成功</option>
+          <option value="门未关好">门未关好</option>
+          <option value="开门超时">开门超时</option>
+        </select>
+        <div class="hint" data-page-node-id="Nf5mLp8wQbZt3vHkC7yRnE">决定这条语音在哪种机器事件发生时播放；单选。</div>
+      </div>
+      <div class="form-item" data-page-node-id="M05wVS3wMjqxbCJxngnl2T">
+        <label data-page-node-id="AlP3taAbQOqtEhWDHQW0kT">音频文件 <span class="req" data-page-node-id="gKT5W5vCfoCjnQWyEmE7hA">*</span></label>
+        <div class="upload-box" id="uploadBox" onclick="fakeUpload()" data-page-node-id="Il9XAHTrrjn15mj6om0pgz">
+          <div class="ui" data-page-node-id="CLYLCUajhTAHd3cSvwARUf">🎵</div>
+          <p data-page-node-id="FZxp5SeZ0VmHMAiCOKgZ0s">点击或拖拽文件到此处上传<br data-page-node-id="PNVmQmQWSEo9UpQyiFLhD9">支持 <b data-page-node-id="sqmVTYpee0X9X14h3hkCgj">wav</b> 格式，单文件 ≤ 10MB</p>
+          <div class="u-h" data-page-node-id="M5mTC5cDADDkcGjxPs0Tw3">建议时长 ≤ 60s，16kHz 以上采样率，仅开门柜对应场景触发时播放</div>
+        </div>
+        <div class="file-info" id="fileInfo" style="display:none;" data-page-node-id="bE9n0CRM1EGZEL0rSdjMnB">
+          <span style="font-size:18px;" data-page-node-id="qhWGVoe5cxwsqYZsHfraeu">🎵</span>
+          <div data-page-node-id="GdJ31xANilHIto8md2lmLT"><div class="fn" data-page-node-id="SV5WkHTvQtTskqUTS0Gvsr">welcome_promo_20260831.wav</div><div class="fs" data-page-node-id="hRFlMVpeeqzuJN28eQPG8N">1.2 MB · 8s · 44100Hz</div></div>
+          <button class="fd" onclick="removeFile()" data-page-node-id="81pp1DrIiqQxlHMmSUgBHJ">删除</button>
+        </div>
+      </div>
+      <div class="form-item" style="margin-bottom:0;" data-page-node-id="Z5d0p21yI9wg36EPJn9pqu">
+        <label data-page-node-id="gBDFbdFQwdPcYExl5qME6A">播放内容说明</label>
+        <textarea id="voiceDesc" placeholder="选填。填写语音播放的文案内容，便于运营审核。例：欢迎光临大黄鹅开门柜，本柜本周冰红茶买一送一，欢迎选购！"></textarea>
+      </div>
+    </div>
+    <div class="mf" data-page-node-id="KLu2svAuxSYzFFAEC6YHEL">
+      <button class="btn default" onclick="closeModal('uploadModal')" data-page-node-id="F1sY9DkITFTDzAvI7GhN3D">取消</button>
+      <button class="btn primary" onclick="submitUpload()" data-page-node-id="BEuW9vZIb0qrYReARG0Ugv">提交审核</button>
+    </div>
+  </div>
+</div>
+
+<!-- 语音推送：语音管理页行点击入口专用弹窗（v8.36 形态，恢复原状） -->
+<div class="mask" id="pushBatchModal" data-page-node-id="tTIGtg7JLzM3A9MOly3G2P">
+  <div class="modal wide" data-page-node-id="Mhswa2DmQuSj1lJJgqmerO">
+    <div class="mh" data-page-node-id="I0We2Fli0vhhtZjJ82nMgi"><h3 data-page-node-id="5leFH3giv8obRyYhV0M0dI">语音推送<span class="mh-sub" data-page-node-id="S4qzcwyynGeo155sot9zeB">选择要推送的机器</span></h3><button class="x" onclick="closeModal('pushBatchModal')" data-page-node-id="g8L5TBNtxQvuwuArCvCu7L">×</button></div>
+    <div class="mb" data-page-node-id="SJY5eBDGtO4VfM7HwPYw8C">
+      <div style="margin-bottom:14px;padding:10px 14px;background:#FFF7E8;border:1px solid #FFD9A8;border-radius:4px;display:flex;align-items:center;gap:8px;font-size:13px;color:#8B5A00;" data-page-node-id="vjCcx7mWAoSsVH3Mdxav7P">
+        <span style="flex-shrink:0;width:18px;height:18px;background:#FF7D00;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;" data-page-node-id="HN8Ux0kzEWaCynb5DEz7Qc">!</span>
+        <span id="pushBanner" data-page-node-id="WTPGtNodJOJdhuTpMqRaaE">当前推送语音：<b id="pushVoiceName" style="color:#1F2D3D;" data-page-node-id="788qC4WmjmDDcNtIAVsEKY">—</b> ｜ 已选机器 <b id="pushCount" data-page-node-id="AhmFcAgEE3phvPOZZDdM5z">0</b> 台，推送后立即生效（每台机器每个播报场景各保留一条语音，重复推送覆盖该场景旧语音）。</span>
+      </div>
+      <!-- 机器选择区 -->
+      <div class="form-item" data-page-node-id="IAhDnTE4ZlKJaErwexui7Z">
+        <label data-page-node-id="tvfTubzxeHeqcwtc8utYRA">选择机器 <span class="req" data-page-node-id="lsdfszBMfWLv9KbLtXuMG1">*</span></label>
+        <div class="push-panel" data-page-node-id="FFD4Ll9Yyg36fLyrziRNUG">
+          <div class="mp-head" data-page-node-id="HR6WV6dSBGJMAqWxLsbXbC">
+            <input type="text" id="pushKwInput" placeholder="搜索机器编号/名称" oninput="filterPushMachines(this.value)" data-page-node-id="E1pAg29gKkvDSJgHmGTxHL">
+            <button type="button" class="btn sm primary" onclick="triggerPushSearch()" data-page-node-id="rahdmVlOBvBbbrKEmpjdKZ">搜索</button>
+            <button type="button" class="btn sm default" onclick="resetPushSearch()" data-page-node-id="XpSNpUZLrLBvFCtshKc2a3">重置</button>
+          </div>
+          <div class="push-tbl-wrap" data-page-node-id="OEVpjRar2E6HyOSTgaWQg6">
+            <table class="mp-tbl" data-page-node-id="ZllWw4BFw2o0FYH8eTBMSR">
+              <thead data-page-node-id="2IrxdfXRi6gYPYTNbLaMHL">
+                <tr data-page-node-id="wGAZx6haaJMJkKOCBHO1gv">
+                  <th class="col-box" data-page-node-id="AkynESxpZ4IHIC5EcyNiF2"><input type="checkbox" class="check-all" id="pushCheckAll" onclick="togglePushAll(this.checked,event)" title="全选当前页" data-page-node-id="5nsXNrO3AHRQBMuDq8lCdd"></th>
+                  <th class="col-id" data-page-node-id="XeawB7AKwL4ZgZSAJZkcRG">机器编号</th>
+                  <th class="col-name" data-page-node-id="Ab5Ti3z8meFQb4ZVqfpzR3">机器名称<span id="pushCrossTip" class="mp-tag" data-page-node-id="Pnrvu1vqC7bPxXeuz2Wssz">已选 0 台（跨页保留）</span></th>
+                </tr>
+              </thead>
+              <tbody id="pushMachineList" data-page-node-id="qYcNYn6u6c9MdF46yhkOom">
+                <!-- JS 渲染 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div id="pushPager" class="unbind-pager" data-page-node-id="ru909ixZ5jdGDWMqevTRwY"></div>
+      </div>
+    </div>
+    <div class="mf" style="justify-content:space-between;" data-page-node-id="uKrkCTG4PtvfFwoCp55zE8">
+      <span style="font-size:13px;color:#5A6B7F;align-self:center;" data-page-node-id="ZFLpCqWCKhrr43zFdD6VCj">已选 <b id="pushMachineCount" style="color:#1F2D3D;" data-page-node-id="1rcRBNPNk0XBdWvcOgJjem">0</b> 台</span>
+      <div style="display:flex;gap:8px;" data-page-node-id="jUGg4ZKGvRXyYbWBLgEC9s">
+        <button class="btn default" onclick="closeModal('pushBatchModal')" data-page-node-id="DbbRHz31DwCX1I2CPImXFU">取消</button>
+        <button class="btn primary" onclick="confirmPush()" data-page-node-id="hER6KEjHcMDzulpKJB2MMD">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 机器列表批量入口专用弹窗（与语音管理入口的 pushBatchModal 视觉一致：同标题、同 banner 风格）
+     - 机器在列表页已预勾选，进来后只选语音即可
+     - v8.39：移除机器选择表格，只留语音选择，banner 显示当前已选机器数 -->
+<div class="mask" id="pushVoiceModal" data-page-node-id="QTD9UkxtDle2kZLxSPYqqb">
+  <div class="modal wide" data-page-node-id="DL5uELYJxB5N8msu4Tq5QL">
+    <div class="mh" data-page-node-id="ZTPsd4M5QwOyR8gUQfHJNL"><h3 data-page-node-id="pgE1U44vvg8wBUbmKCfLVq">语音推送<span class="mh-sub" data-page-node-id="U22lDCdDjEJJrbotx0PLJV">为已选机器选择语音</span></h3><button class="x" onclick="closeModal('pushVoiceModal')" data-page-node-id="KpvNEz8xYHdkcO2KRj3Xyl">×</button></div>
+    <div class="mb" data-page-node-id="NIWsdO5ImdlQruBACcfU0o">
+      <div style="margin-bottom:14px;padding:10px 14px;background:#FFF7E8;border:1px solid #FFD9A8;border-radius:4px;display:flex;align-items:center;gap:8px;font-size:13px;color:#8B5A00;" data-page-node-id="fXkvEJT7MAF2AWNJJMW4cN">
+        <span style="flex-shrink:0;width:18px;height:18px;background:#FF7D00;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;" data-page-node-id="vjtqjkSHlmDC2q5gkiSNYO">!</span>
+        <span id="pushVoiceBanner" data-page-node-id="cP4qKhFFDYqr8momNTUApK">当前已选机器 <b style="color:#1F2D3D;" data-page-node-id="KVjGysDjqsCCvKn0dMzzAf">0</b> 台，语音推送后立即生效（每台机器每个播报场景各保留一条语音）。</span>
+      </div>
+      <!-- 选择语音区 -->
+      <div class="form-item" data-page-node-id="uBMsTl0uKM0hIX1xEp5fMO">
+        <label data-page-node-id="asFV7GUK8Cs4SlfGtZmx2m">选择语音 <span class="req" data-page-node-id="LYJB83YScGGobJmuICgNu3">*</span></label>
+        <div class="voice-pick" id="pushVoicePickList" data-page-node-id="V3gfXBT7G3ULULz6XPToGs">
+          <!-- JS 渲染 -->
+        </div>
+      </div>
+    </div>
+    <div class="mf" data-page-node-id="BjHUyD4JGE5R2Iuwfu348D">
+      <span style="font-size:13px;color:#5A6B7F;align-self:center;" data-page-node-id="ixbqi9AnXcypoQIFsseWW3">已选 <b id="pushVoiceMachineCount" style="color:#1F2D3D;" data-page-node-id="wMt4s5CSrXRNSTU5nIoCFf">0</b> 台</span>
+      <div style="display:flex;gap:8px;margin-left:auto;" data-page-node-id="lr558fKYxJvNeWOXpJOXxR">
+        <button class="btn default" onclick="closeModal('pushVoiceModal')" data-page-node-id="KywFmMnXsBjU3DTVVshigC">取消</button>
+        <button class="btn primary" onclick="confirmPushVoice()" data-page-node-id="VgsxTZXTTBwYw08lUiiiwa">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OS 审核详情 -->
+<div class="mask" id="auditModal" data-page-node-id="F5J0WpLvm3eK1vGNEW3yQO">
+  <div class="modal" data-page-node-id="SOiy3YKhIlmFdIMGEmnB3M">
+    <div class="mh" data-page-node-id="0d0EsmHHpv0Bj3BDBpMRNL"><h3 data-page-node-id="1KyhJ0s2hmhz1cWTeTWSWb">语音审核详情</h3><button class="x" onclick="closeModal('auditModal')" data-page-node-id="oQgQOJleQi7qZoVF2ZN8FS">×</button></div>
+    <div class="mb" id="auditBody" data-page-node-id="QEmgCqd9cfxyCoa1xHT1Dy"></div>
+    <div class="mf" id="auditModalActions" data-page-node-id="Vjb5GYZi37C8veLT1qxx45">
+      <button class="btn default" onclick="closeModal('auditModal')" data-page-node-id="pn996jND3SpgFZO38FGBHH">关闭</button>
+      <button class="btn" style="background:#fff;color:#F53F3F;border:1px solid #F53F3F;" onclick="openReject()" data-page-node-id="BFr2xjwImcdNEqQliVseDM">驳回</button>
+      <button class="btn" style="background:#00B42A;color:#fff;" onclick="openPassConfirm()" data-page-node-id="Bu900iVctNhyE6APXTRv8z">通过</button>
+    </div>
+  </div>
+</div>
+
+<!-- 通过确认（二次弹窗） -->
+<div class="mask" id="passConfirmModal" data-page-node-id="zqibm2gu8ZXcHH3G0oes31">
+  <div class="modal" style="width:420px;" data-page-node-id="saHoE1Lf3Zt94qkdiUKgCS">
+    <div class="mb" style="padding:24px 24px 8px;position:relative;" data-page-node-id="24JvnK7PvmEb71lKxMIcj9">
+      <button onclick="closeModal('passConfirmModal')" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:20px;color:#8A99AB;cursor:pointer;line-height:1;" data-page-node-id="8uAld7NHnVKP8hnYUv7xad">×</button>
+      <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#1F2D3D;" data-page-node-id="YepxkrusnlkykzagvfAzBL">确认通过</h3>
+      <div style="font-size:13px;line-height:1.7;color:#4E5969;" data-page-node-id="pPFqoL3fUkIb5nY3j1zpvT">通过后该语音即可被商户推送到机器，<br data-page-node-id="Ospe3Ov0OHoXP9LZKpnGpm">确认通过 <b id="passConfirmName" style="color:#1F2D3D;" data-page-node-id="YLpkQsLwJBAH06TDdoxoae"></b>？</div>
+    </div>
+    <div class="mf" style="justify-content:flex-end;" data-page-node-id="c4uK1Aj1Vg4oxXKJcUpDaP">
+      <button class="btn default" onclick="closeModal('passConfirmModal')" data-page-node-id="PvQstghVjXccIcraLY1jOo">取消</button>
+      <button class="btn primary" onclick="doPass()" data-page-node-id="TdoFUWBd1VWEE17bLSXwlp">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 驳回原因（自由输入必填） -->
+<div class="mask" id="rejectModal" data-page-node-id="LpmrfoEb3TDtUS5YFDENzT">
+  <div class="modal" style="width:460px;" data-page-node-id="rxgz4q9kqZzEkqrNXLYbmE">
+    <div class="mh" data-page-node-id="8TBroeQ8GeVTHCfESaiAeT"><h3 data-page-node-id="70DeHl4iDHDfQcAK2wt6hL">驳回语音</h3><button class="x" onclick="closeModal('rejectModal')" data-page-node-id="4Rz7F4qCNNdgWiXKHhd5LH">×</button></div>
+    <div class="mb" data-page-node-id="2mAAWUBoHUuqLM8WdSPgdd">
+      <div class="form-item" data-page-node-id="vn6sWVXtFCGgtdUaCRqEzx">
+        <label data-page-node-id="ide6WxjxqPToobdA7bTlBe">语音名称</label>
+        <div style="font-size:13px;color:#1F2D3D;" id="rejectVoiceName" data-page-node-id="ATmb3uwJIZRdJnFW0Dejso">—</div>
+      </div>
+      <div class="form-item" style="margin-bottom:0;" data-page-node-id="9D7dyBLhk98eFFgbDZhSgA">
+        <label data-page-node-id="OWLIC10C6B7xbiwcPGjLlr">驳回原因 <span class="req" data-page-node-id="5kORPQjZbV25fsbryxAvIw">*</span></label>
+        <textarea id="rejectReasonInput" rows="4" placeholder="请填写驳回原因，商户侧将可见。例：语音中含绝对化用语，请修改后重新提交。"></textarea>
+      </div>
+    </div>
+    <div class="mf" data-page-node-id="HIK4AeIuSAmUH4yLobn6ox">
+      <button class="btn default" onclick="closeModal('rejectModal')" data-page-node-id="C6FGNh6S3NSpl6EAc3ehAD">取消</button>
+      <button class="btn primary" onclick="doReject()" data-page-node-id="wtr4REPxQLcYhlLIL4a2HC">确认驳回</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑语音（客户侧：改名/改说明；已驳回支持重新上传音频） -->
+<div class="mask" id="editModal" data-page-node-id="ODDpsz6hvzB2ABTCtIDGeM">
+  <div class="modal" style="width:480px;" data-page-node-id="4C9EpH4j11gxzYzssV7Qyp">
+    <div class="mh" data-page-node-id="ZOI6FiRuTrIeCo85Xc9xxZ"><h3 id="editModalTitle" data-page-node-id="YbxpsMgsCdZ2i3Bqz1PdRv">编辑语音</h3><button class="x" onclick="closeModal('editModal')" data-page-node-id="C6YrnPEAykHRWps5pgFBCo">×</button></div>
+    <div class="mb" data-page-node-id="WDQF0F2ixTJYtHktK6kmyj">
+      <div class="form-item" data-page-node-id="sqFWLRxA2lZ4A8NLGCYSME">
+        <label data-page-node-id="GvUeuBoSHpLN2JrCUlJshH">语音名称 <span class="req" data-page-node-id="yhX1Hu1pRGF9UE8VCgtdtl">*</span></label>
+        <input type="text" id="editVoiceName" data-page-node-id="7TQbvnEXWcG43jY2ZCB9y9">
+      </div>
+      <div class="form-item" id="editFileArea" data-page-node-id="IT8ZEVfejSTHiDsoo9abrW">
+        <!-- JS 根据状态切换：驳回→显示上传框；其他状态→显示"已上传文件不可修改" -->
+      </div>
+      <div class="form-item" style="margin-bottom:0;" data-page-node-id="w0fV6vxiiPzIJZecJNpttK">
+        <label data-page-node-id="ifTQ8qdQSHUSXTKTXSESKT">播放内容说明</label>
+        <textarea id="editVoiceDesc" placeholder="选填。填写语音播放的文案内容，便于运营审核。"></textarea>
+      </div>
+      <div class="hint" style="font-size:12px;color:#FF7D00;margin-top:8px;" id="editHint" data-page-node-id="5D5iX3B9G56yoWPZIoX0Q1">编辑提交后将重新进入审核，审核期间不可推送到机器。</div>
+    </div>
+    <div class="mf" data-page-node-id="OHzC5FMlg6d1dTsvowGJwQ">
+      <button class="btn default" onclick="closeModal('editModal')" data-page-node-id="UNaCnehIcDxnrdDDD01Vf0">取消</button>
+      <button class="btn primary" onclick="submitEdit()" data-page-node-id="7nrkGdBOX01XwnZKHEcsBh">提交重新审核</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认（客户侧） -->
+<div class="mask" id="deleteModal" data-page-node-id="aYDSap4YnKO3104b4JRAoc">
+  <div class="modal" style="width:420px;" data-page-node-id="gVAxoe9l7Dp1icdgA2PUiZ">
+    <div class="mh" data-page-node-id="lv5pGdBRuQ3I1FaE8stftE"><h3 data-page-node-id="yK87ez0tayZrKnUiBjZy6x">删除语音</h3><button class="x" onclick="closeModal('deleteModal')" data-page-node-id="OHjrQQxET07NJj5SRjykPw">×</button></div>
+    <div class="mb" data-page-node-id="kpDnKeqDienyf3wt4YBWRA">
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;" data-page-node-id="lqkni8HlwLQkF6cbapy3F1">
+        <span style="width:38px;height:38px;border-radius:50%;background:#FFECE8;color:#F53F3F;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;" data-page-node-id="zNRuO8riidBIqbnpMbJCYG">!</span>
+        <div style="font-size:13px;color:#1F2D3D;" data-page-node-id="sBsORKKcL2A7jTinrlp4yT">
+          确认删除语音 <b id="delVoiceName" data-page-node-id="LfvkZqZBK58m0MoktEy7RF"></b>？<br data-page-node-id="oyKnNZRa3UmsVsHfuOxfBa">
+          <span style="color:#F53F3F;" id="delVoiceWarn" data-page-node-id="pOEpWUR6Q1dqkAHDYrD3DP">删除后不可恢复。</span>
+        </div>
+      </div>
+    </div>
+    <div class="mf" data-page-node-id="Z3PYGWHN7j99QzpBFXaGDc">
+      <button class="btn default" onclick="closeModal('deleteModal')" data-page-node-id="9xK5K67H5A7ZKTFM3NGdRN">取消</button>
+      <button class="btn primary" onclick="doDelete()" data-page-node-id="Elz5yrRg7ecv2wLbqbjSxo">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 解除语音：勾选已推送机器，批量解除 -->
+<div class="mask" id="unbindModal" data-page-node-id="zd6HC6FIHUyMjydqiHia9l">
+  <div class="modal wide" data-page-node-id="JtFTyjtSFDbe52H44JhyBf">
+    <div class="mh" data-page-node-id="5pk0AIWGjPid4XwcgxQdok"><h3 data-page-node-id="5eR4UAT9hpftghqdi8nuSp">解除语音</h3><button class="x" onclick="closeModal('unbindModal')" data-page-node-id="57XE0oO98Ty6roCTR5VBcF">×</button></div>
+    <div class="mb" data-page-node-id="wmhPyUmEE5ScV9nPmESal8">
+      <div class="info-banner" style="margin-bottom:14px;" data-page-node-id="5wEABZwxOKVBZZ9D5vOTMx">
+        <span class="bi" data-page-node-id="5tlUChqnSwYLTAePSkNGXz">🔔</span>
+        <span data-page-node-id="LzZL3dbBKtGI8LTdTUUbnD">语音 <b id="unbindVoiceName" data-page-node-id="wbe3nXBvBQnbDnM0KrCNGy"></b> 当前已推送给 <b id="unbindTotal" data-page-node-id="G4e90C6F93ns4eYVXVa6Hy"></b> 台机器。勾选要解除的机器，支持批量解除。</span>
+      </div>
+
+      <div class="form-item" data-page-node-id="626KuGvAGsXDgXE85lXgmu">
+        <label data-page-node-id="DL5TQriEzjB3Gm4wAJi52O">已绑定该语音的机器 <span class="req" data-page-node-id="V0HOgM2elCFvJPtAYju50A">*</span></label>
+        <div style="border:1px solid #DCE0E6;border-radius:4px;overflow:hidden;" data-page-node-id="k0SkpGq3w4bm3teH6ZdVL6">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F5F7FA;border-bottom:1px solid #ECEEF2;font-size:13px;color:#5A6B7F;" data-page-node-id="EcJBEUkeIiLgu0WR0IuIz2">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;" data-page-node-id="44llL8HFzgTBMyjBMNNll8">
+              <input type="checkbox" id="unbindAll" onclick="toggleUnbindAll(this.checked)" data-page-node-id="NKtwwCzd1uhUCV7tjZCTsw"> 全选本页
+            </label>
+            <span style="color:#5A6B7F;font-size:12px;" data-page-node-id="sGRhiYEx7iWdgodVF9u7ly">已选 <b id="unbindSelected" style="color:#2E6BFF;" data-page-node-id="ZaBJpv2GLLPUQqnwvqVkwv">0</b> 台</span>
+          </div>
+          <div id="unbindMachineList" style="max-height:340px;overflow-y:auto;" data-page-node-id="RWtjLKLtVo1DwkbQKXJFqf"></div>
+          <div id="unbindPager" class="unbind-pager" data-page-node-id="uT2DejByjGnWMBTKOgh0Cq"></div>
+        </div>
+        <div class="hint" data-page-node-id="eZ4jGwczUdYz8YHlkY4tWu">解除后，该场景将播放机器端默认语音，不再播放该语音（默认语音由机器端内置，平台无配置项）</div>
+      </div>
+    </div>
+    <div class="mf" data-page-node-id="bjQXhnTrzyB0pi5whV3FxR">
+      <button class="btn default" onclick="closeModal('unbindModal')" data-page-node-id="bUh7nksi8UY3qHjqarwdcC">取消</button>
+      <button class="btn primary" onclick="doUnbind()" data-page-node-id="rD0m3z8Po3V02NqI2VtWsh">确认解除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 通用消息/确认弹层（页面居中，替代原生 alert/confirm） ==================== -->
+<div class="msg-box" id="msgBox" data-page-node-id="ST0aPi8LeebK8ENh7L3kGL">
+  <div class="mi-icon" data-page-node-id="dAeyFcbAnMZaM1T0CCHW8m"><span id="msgIcon" data-page-node-id="Xa2XIYRJjJFaN9m51X15F7">!</span></div>
+  <div class="mi-text" id="msgText" data-page-node-id="FS6FNeRSt54h37Sct6q6a7"></div>
+  <div class="mi-foot" data-page-node-id="36vMOxdm9dW7M4x12RAV1O">
+    <button class="btn default" id="msgCancel" style="display:none;" onclick="closeMsg(false)" data-page-node-id="ahKA2El9c8or44xIYBX9TI">取消</button>
+    <button class="btn primary" id="msgOk" onclick="closeMsg(true)" data-page-node-id="31SRCGEFxjPUKANhLfHFHs">知道了</button>
+  </div>
+</div>
+<div class="mask" id="msgMask" style="z-index:1050;" data-page-node-id="oMZpTdMSdv0bQDFmzTFzA5"></div>
+
+<script>
+/* ========== 数据 ========== */
+var STATUS = {pending:{l:'审核中',c:'tag-pending'},pass:{l:'已通过',c:'tag-pass'},reject:{l:'已驳回',c:'tag-reject'}};
+/* 当前登录商户（PC 端）。客户上传语音时作为语音归属商户写入 OS 审核列表 */
+var CURRENT_CUSTOMER = '办公室测试机构';
+
+var osMachineData = [
+  {id:'82004675',type:'缩小柜',online:false,status:'正常',name:'n刺缩小柜',cust:'迪丽热色',voiceMap:{'开门成功':'v1'},pushTime:'2026-08-31 09:15',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-20 18:56:13'},
+  {id:'82004674',type:'隐小柜',online:false,status:'正常',name:'N号linuo牌小柜',cust:'商品库操作优化',voiceMap:{},pushTime:'',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-19 11:17:50'},
+  {id:'82004673',type:'隐小柜',online:false,status:'正常',name:'无源linun矿泉路小柜',cust:'迪丽热色',voiceMap:{},pushTime:'',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-19 09:39:59'},
+  {id:'82004672',type:'隐小柜',online:false,status:'正常',name:'N号诺顿缩小柜',cust:'迪丽热色',voiceMap:{'开门成功':'v1'},pushTime:'2026-08-31 09:15',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-18 16:24:14'},
+  {id:'82004671',type:'隐小柜',online:false,status:'正常',name:'N余瑶小柜',cust:'迪丽热色',voiceMap:{},pushTime:'',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-18 11:28:34'},
+  {id:'82004670',type:'隐小柜',online:false,status:'正常',name:'N张酒缩小柜',cust:'迪丽热色',voiceMap:{},pushTime:'',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-18 10:36:58'},
+  {id:'82004669',type:'隐小柜',online:false,status:'正常',name:'N酒缩小柜',cust:'迪丽热色',voiceMap:{},pushTime:'',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-18 10:31:33'},
+  {id:'82004668',type:'隐小柜',online:true,status:'正常',name:'隐小柜缩小柜',cust:'迪丽热色',voiceMap:{'关门成功':'v3'},pushTime:'2026-08-25 16:10',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-17 18:34:14'},
+  {id:'82004667',type:'售货机',online:true,status:'正常',name:'宝安门店售货机',cust:'迪丽热色',voiceMap:{},pushTime:'',sales:'¥0',pay:'支付宝(扫码)、支付...',active:'2026-08-16 10:12:00'}
+];
+
+var customerVoiceData = [
+  {vid:'v1',name:'欢迎光临-优惠活动播报',scene:'开门成功',dur:'8s',size:'1.2MB',time:'2026-08-31 09:12',status:'pass',pushed:36,desc:'欢迎光临大黄鹅开门柜，本柜本周优惠活动进行中！'},
+  {vid:'v2',name:'新品尝鲜季播报',scene:'开门成功',dur:'12s',size:'2.1MB',time:'2026-08-30 15:40',status:'pending',pushed:0,desc:'新品第二件半价，欢迎选购！'},
+  {vid:'v3',name:'夜间特价播报',scene:'关门成功',dur:'6s',size:'0.9MB',time:'2026-08-25 16:05',status:'pass',pushed:12,desc:'夜间全场特价，欢迎选购！'},
+  {vid:'v4',name:'端午特惠活动',scene:'开门成功',dur:'9s',size:'1.5MB',time:'2026-08-22 11:20',status:'reject',reason:'含绝对化用语"全网最低价"',pushed:0,desc:'端午特惠，全网最低价！'},
+  {vid:'v5',name:'中秋礼盒促销',scene:'开门成功',dur:'10s',size:'1.8MB',time:'2026-08-18 10:02',status:'pass',pushed:0,desc:'中秋礼盒限时促销，满99减20！'}
+];
+
+var customerMachineData = [
+  {id:'81866653',kind:'开门柜',site:'深圳·科技园 1号柜',model:'智能柜D',status:'正常',name:'颐化测试机器',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-07-30 17:07:00',online:true,voiceMap:{'开门成功':'v1'},pushTime:'2026-08-31 09:15'},
+  {id:'81866654',kind:'开门柜',site:'深圳·科技园 2号柜',model:'颐小柜',status:'正常',name:'N码',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-08-19 11:07:50',online:true,voiceMap:{'开门成功':'v1'},pushTime:'2026-08-31 09:15'},
+  {id:'81866655',kind:'开门柜',site:'深圳·科技园 3号柜',model:'智能柜D',status:'正常',name:'颐献颐化',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-08-19 09:39:59',online:true,voiceMap:{'关门成功':'v3'},pushTime:'2026-08-25 16:10'},
+  {id:'81866656',kind:'开门柜',site:'深圳·华强北 1号柜',model:'智能柜D',status:'正常',name:'N码智慧小柜',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-08-17 18:34:14',online:true,voiceMap:{},pushTime:''},
+  {id:'81866657',kind:'开门柜',site:'深圳·华强北 2号柜',model:'颐小柜',status:'正常',name:'N颐化小柜',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-08-18 16:24:14',online:false,voiceMap:{},pushTime:''},
+  {id:'81866658',kind:'售货机',site:'深圳·宝安 1号售货机',model:'售货机',status:'正常',name:'宝安门店售货机',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-08-16 10:12:00',online:true,voiceMap:{},pushTime:''}
+];
+
+/* 已绑定语音的机器池（独立于 PC 端展示的 6 台，方便演示"已推送 36 台"这类体量） */
+/* 真实业态里这池就是所有绑定了此 voice 的机器全集；解除时按池全选 / 翻页挑选 */
+/* v8.50：池 key 改存 vid（语音内部唯一ID），语音名称允许重复，不再作为主键 */
+var _voiceBoundPool = {};   // { vid: [machine, ...] }
+function _genBoundPool(vid, count, prefix){
+  var sites = ['深圳·科技园', '深圳·华强北', '深圳·南山区', '深圳·福田区', '深圳·罗湖区', '广州·天河区', '广州·越秀区', '东莞·南城', '佛山·禅城', '惠州·惠城'];
+  var custs = ['办公室测试机构', '深圳市XX贸易有限公司', '迪丽热色', '广州YY便利店', '惠州市ZZ小店', '佛山WW连锁'];
+  var list = [];
+  for(var i = 1; i <= count; i++){
+    var id = prefix + ('000' + i).slice(-3);
+    var site = sites[i % sites.length] + ' ' + (Math.floor((i-1)/sites.length)+1) + '号柜';
+    list.push({
+      id: id,
+      kind: '开门柜',
+      site: site,
+      model: i % 2 === 0 ? '智能柜D' : '颐小柜',
+      status: '正常',
+      name: i % 3 === 0 ? '门店' + id + '机器' : '投柜' + id,
+      cust: custs[i % custs.length],
+      sales: '¥' + (i * 12),
+      pay: '支付宝(扫码)、微信(扫码)',
+      active: '2026-08-' + ('0' + ((i % 30) + 1)).slice(-2) + ' 09:00:00',
+      online: i % 5 !== 0,
+      voice: vid,
+      pushTime: '2026-08-31 09:15'
+    });
+  }
+  // 把前两个用真实数据（81866653/81866654），避免列表里机器编号脱节
+  if(vid === 'v1'){
+    list[0] = {id:'81866653',kind:'开门柜',site:'深圳·科技园 1号柜',model:'智能柜D',status:'正常',name:'颐化测试机器',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-07-30 17:07:00',online:true,voiceMap:{'开门成功':vid},pushTime:'2026-08-31 09:15'};
+    list[1] = {id:'81866654',kind:'开门柜',site:'深圳·科技园 2号柜',model:'颐小柜',status:'正常',name:'N码',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-08-19 11:07:50',online:true,voiceMap:{'开门成功':vid},pushTime:'2026-08-31 09:15'};
+  } else if(vid === 'v3'){
+    list[0] = {id:'81866655',kind:'开门柜',site:'深圳·科技园 3号柜',model:'智能柜D',status:'正常',name:'颐献颐化',cust:'办公室测试机构',sales:'¥0',pay:'支付宝(扫码)、支...',active:'2026-08-19 09:39:59',online:true,voiceMap:{'关门成功':vid},pushTime:'2026-08-25 16:10'};
+  }
+  return list;
+}
+// 懒生成：首次访问时建池
+function getBoundPool(vid){
+  if(_voiceBoundPool[vid]) return _voiceBoundPool[vid];
+  var pool;
+  if(vid === 'v1')      pool = _genBoundPool(vid, 36, '88001');
+  else if(vid === 'v3') pool = _genBoundPool(vid, 12, '88100');
+  else if(vid === 'v5') pool = _genBoundPool(vid, 8,  '88200');
+  else                                            pool = [];
+  _voiceBoundPool[vid] = pool;
+  return pool;
+}
+
+/* ========== v8.43：已推送机器「单一真相源」==========
+   旧逻辑：totalReal>0 ? totalReal : pool.length → 同一列里有的数机器表、有的数池子，口径分裂
+   新逻辑：计数 = 绑定池 ∪ 真实机器表（按机器编号去重），全站统一走 getPushedCount() */
+function _realBoundMachines(vid){
+  // v8.60：机器按场景绑定多条语音，命中任一场景即算绑定该语音
+  return customerMachineData.concat(osMachineData).filter(function(m){ return machineHasVoice(m, vid); });
+}
+/* 绑定全集：池里的演示机器 + 真实推送过的机器（去重，池内已有则保留池内那份） */
+function getPushedMachines(vid){
+  var pool = getBoundPool(vid).slice();
+  var ids = {};
+  pool.forEach(function(m){ ids[m.id] = true; });
+  _realBoundMachines(vid).forEach(function(m){ if(!ids[m.id]){ ids[m.id] = true; pool.push(m); } });
+  return pool;
+}
+function getPushedCount(vid){ return getPushedMachines(vid).length; }
+
+/* ========== v8.60：按「播报场景」绑定 ==========
+   规则：每台机器按播报场景各保留一条语音（最多 4 条）；推送某场景语音仅覆盖该机器该场景的旧语音，
+   不影响其他场景；某场景未绑定语音时，播放机器端该场景的默认语音。 */
+var BROADCAST_SCENES = ['开门成功','关门成功','门未关好','开门超时'];
+function getVoiceMap(m){ if(!m.voiceMap) m.voiceMap = {}; return m.voiceMap; }
+function getSceneVoice(m, scene){ return getVoiceMap(m)[scene] || ''; }
+function setSceneVoice(m, scene, vid){ var mp = getVoiceMap(m); if(vid){ mp[scene] = vid; } else { delete mp[scene]; } }
+function machineHasVoice(m, vid){ var mp = m.voiceMap || {}; for(var s in mp){ if(mp[s] === vid) return true; } return false; }
+function clearMachineVoice(m, vid){ var mp = m.voiceMap || {}; var hit = false; for(var s in mp){ if(mp[s] === vid){ delete mp[s]; hit = true; } } return hit; }
+/* 取语音所属播报场景（客户语音表 + OS 审核表都查，兼容客户上传后未过审的情况） */
+function getVoiceSceneOf(vid){
+  var v = customerVoiceData.concat(auditData).filter(function(x){ return x.vid === vid; })[0];
+  return (v && v.scene) || '';
+}
+/* 推送后把真实机器写回池（同编号替换成真实对象引用，保证 pushTime 双向同步） */
+function syncMachineToPool(vid, m){
+  var pool = getBoundPool(vid);
+  for(var i=0;i<pool.length;i++){
+    if(pool[i].id === m.id){ pool[i] = m; return; }
+  }
+  pool.unshift(m);
+}
+function removeFromBoundPool(vid, machineId){
+  _voiceBoundPool[vid] = getBoundPool(vid).filter(function(m){ return m.id !== machineId; });
+}
+/* 当前时间戳（原型固定在 2026-08-31 当天） */
+function nowStr(){
+  var d = new Date();
+  return '2026-08-31 ' + ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+}
+/* 机型号段：PC 端用 kind（开门柜/售货机），OS 端用 type（隐小柜/缩小柜/售货机） */
+function machineKind(m){ return (m && (m.kind || m.type)) || ''; }
+/* 开门柜类设备（非售货机）才支持语音播报 */
+function isOpeningCabinet(m){ var k = machineKind(m); return k !== '售货机' && k !== ''; }
+/* v8.43 #5 #10：不支持推送的两类 —— 售货机（机型不支持）、离线机（收不到下发） */
+function isPushableMachine(m){ return !!m && isOpeningCabinet(m) && m.online !== false; }
+/* 从 id 取机器对象（双端合并查找） */
+function findMachineById(id){
+  return customerMachineData.find(function(m){ return m.id === id; })
+      || osMachineData.find(function(m){ return m.id === id; })
+      || null;
+}
+
+var auditData = [
+  {vid:'a1',name:'新品尝鲜季播报',scene:'开门成功',customer:'深圳市XX贸易有限公司',dur:'12s',size:'2.1MB',desc:'欢迎光临大黄鹅开门柜，新品尝鲜季火热进行中，本柜新品第二件半价，欢迎选购！',time:'2026-08-30 15:40',status:'pending'},
+  {vid:'a2',name:'开门柜中秋特惠',scene:'开门成功',customer:'广州YY便利店',dur:'9s',size:'1.5MB',desc:'中秋礼盒限时促销，全场满99减20！',time:'2026-08-31 10:25',status:'pending'}
+];
+
+/* ========== 双端切换 ========== */
+function switchApp(app){
+  document.getElementById('appOs').classList.toggle('hidden', app!=='os');
+  document.getElementById('appCustomer').classList.toggle('hidden', app!=='customer');
+  document.getElementById('swOs').classList.toggle('active', app==='os');
+  document.getElementById('swCustomer').classList.toggle('active', app==='customer');
+}
+
+/* ========== OS 子页 ========== */
+function showOsPage(p){
+  document.getElementById('osPageList').style.display = p==='machine'?'block':'none';
+  document.getElementById('osPageVoice').style.display = p==='voice'?'block':'none';
+  document.getElementById('osMenuList').classList.toggle('active', p==='machine');
+  document.getElementById('osMenuVoice').classList.toggle('active', p==='voice');
+  if(p==='voice') renderAudit();
+}
+
+function renderOsGrid(){
+  var rows = osMachineData.map(function(m,i){
+    var onlineCell = m.online
+      ? '<span><span class="dot on"></span><span>在线</span></span>'
+      : '<span><span class="dot off"></span><span>离线</span></span>';
+    // v8.25：操作列整列删除（机器列表不需要行内操作）
+    // v8.49：机器名称 / 客户名称取消蓝字；机器编号恢复蓝字视觉链接（无 onclick：详情弹窗 v8.48 已删）
+    return '<tr>'+
+      '<td><input type="checkbox" onchange="toggleMachineSel(\''+m.id+'\',this.checked,\'os\')" '+(m._selected?'checked':'')+'></td>'+
+      '<td><a class="link" href="javascript:void(0)">'+m.id+'</a></td>'+
+      '<td>'+m.type+'</td>'+
+      '<td>'+onlineCell+'</td>'+
+      '<td>'+m.status+'</td>'+
+      '<td>'+m.name+'</td>'+
+      '<td>'+m.cust+'</td>'+
+      '<td>'+m.sales+'</td>'+
+      '<td style="color:#8A99AB;">'+m.pay+'</td>'+
+      '<td>'+m.active+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('gridBody').innerHTML = rows;
+}
+
+/* 机器列表 checkbox ↔ 数据源同步（双端共用） */
+function toggleMachineSel(id, checked, from){
+  var data = from==='os' ? osMachineData : customerMachineData;
+  var m = data.find(function(x){ return x.id === id; });
+  if(m) m._selected = checked ? true : false;
+  // 同步全选状态
+  var allCb = document.querySelectorAll('#'+(from==='os'?'osPageList':'customerPageMachine')+' .check-all');
+  if(allCb.length){
+    var total = data.length;
+    var picked = data.filter(function(x){ return x._selected; }).length;
+    allCb.forEach(function(cb){ cb.checked = (total>0 && picked===total); cb.indeterminate = (picked>0 && picked<total); });
+  }
+}
+
+/* 机器列表表头「全选」checkbox 行为 */
+function toggleAllMachineSel(cb, from){
+  var data = from==='os' ? osMachineData : customerMachineData;
+  var checked = !!cb.checked;
+  data.forEach(function(m){ m._selected = checked; });
+  var containerSel = from==='os' ? '#osPageList' : '#customerPageMachine';
+  document.querySelectorAll(containerSel + ' tbody input[type=checkbox]').forEach(function(c){ c.checked = checked; });
+  cb.indeterminate = false;
+}
+
+/* PC 端分页器「全选」按钮：选当前页/全部（演示用：直接全选所有数据） */
+function selectAllCustomer(){
+  customerMachineData.forEach(function(m){ m._selected = true; });
+  document.querySelectorAll('#customerPageMachine tbody input[type=checkbox]').forEach(function(c){ c.checked = true; });
+  document.querySelectorAll('#customerPageMachine .check-all').forEach(function(cb){ cb.checked = true; cb.indeterminate = false; });
+  showToast('已全选所有机器', 'success');
+}
+
+/* ========== 下拉筛选（商户名称 / 状态） ========== */
+function toggleOpt(ctrl){
+  var list = ctrl.querySelector('.opt-list');
+  document.querySelectorAll('.opt-list.show').forEach(function(l){ if(l!==list) l.classList.remove('show'); });
+  list.classList.toggle('show');
+}
+function pickOpt(ev){
+  ev.stopPropagation();
+  var opt = ev.target;
+  if(!opt || opt.tagName.toLowerCase()!=='div' || !opt.getAttribute('data-v')) return;
+  var ctrl = opt.closest('.ctrl.sel');
+  if(!ctrl) return;
+  ctrl.querySelector('.sel-txt').textContent = opt.textContent;
+  ctrl.dataset.val = opt.getAttribute('data-v');
+  ctrl.classList.toggle('picked', !!ctrl.dataset.val);
+  opt.parentNode.querySelectorAll('div').forEach(function(d){ d.classList.toggle('active', d===opt); });
+  opt.parentNode.classList.remove('show');
+}
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(t && t.tagName.toLowerCase()==='div' && t.getAttribute && t.getAttribute('data-v') && t.closest('.opt-list')){
+    pickOpt(e);
+    return;
+  }
+  if(!e.target.closest('.ctrl.sel')) document.querySelectorAll('.opt-list.show').forEach(function(l){ l.classList.remove('show'); });
+});
+function getAuditFilter(){
+  var st = document.querySelector('[data-f="status"]');
+  var me = document.querySelector('[data-f="merchant"]');
+  return {status:(st?st.dataset.val:''), merchant:(me?me.dataset.val:'')};
+}
+function applyAuditFilter(){ renderAudit(); }
+function resetAuditFilter(){
+  document.querySelectorAll('.filter .ctrl.sel').forEach(function(c){
+    c.dataset.val=''; c.classList.remove('picked');
+    var t=c.querySelector('.sel-txt'); if(t) t.textContent='请选择';
+    c.querySelectorAll('.opt-list div').forEach(function(d){ d.classList.remove('active'); });
+  });
+  var kw = document.querySelector('.filter .field input[type=text]'); if(kw) kw.value='';
+  renderAudit();
+}
+
+function renderAudit(){
+  var f = getAuditFilter();
+  var kw = (document.querySelector('#osPageVoice .filter input[type=text]')||{}).value || '';
+  var rows = auditData.filter(function(a){
+    if(f.status && a.status!==f.status) return false;
+    if(f.merchant && a.customer!==f.merchant) return false;
+    if(kw && a.name.indexOf(kw)===-1 && a.desc.indexOf(kw)===-1) return false;
+    return true;
+  }).map(function(a){
+    var st = STATUS[a.status];
+    // v8.50：审核操作按 vid 定位（名称可重复，不能再用 name 当主键）；name 仅用于展示
+    var ops = a.status==='pending'
+      ? '<button class="op-link-text" style="color:#00B42A;" onclick="openPassConfirm(\''+a.vid+'\',\''+(a.name||'').replace(/'/g,"\\'")+'\')">通过</button>'+
+        '<button class="op-link-text danger" onclick="openReject(\''+a.vid+'\',\''+(a.name||'').replace(/'/g,"\\'")+'\')">驳回</button>'
+      : '<button class="op-link-text" onclick="openAudit(\''+a.vid+'\',\''+(a.name||'').replace(/'/g,"\\'")+'\',\''+a.customer+'\',\''+(a.scene||'—').replace(/'/g,"\\'")+'\',\''+a.dur+'\',\''+a.size+'\',\''+a.time+'\',\''+(a.desc||'').replace(/'/g,"\\'")+'\',\''+a.status+'\')">查看</button>';
+    return '<tr>'+
+      '<td>'+a.customer+'</td>'+
+      '<td><b>'+a.name+'</b></td>'+
+      '<td><span class="scene-tag">'+(a.scene || '—')+'</span></td>'+
+      '<td><button class="play" onclick="playListItem(this,\''+a.dur+'\',\''+a.name+'\')" type="button">试听</button></td>'+
+      '<td>'+a.dur+'</td>'+
+      '<td>'+a.size+'</td>'+
+      '<td class="desc-col" title="'+a.desc+'">'+a.desc+'</td>'+
+      '<td>'+a.time+'</td>'+
+      '<td class="status-cell"><span class="tag '+st.c+'">'+st.l+'</span></td>'+
+      '<td class="ops-cell">'+ops+'</td></tr>';
+  }).join('');
+  document.getElementById('auditTbody').innerHTML = rows || '<tr><td colspan="10" style="text-align:center;color:#8A99AB;padding:36px 0;">暂无符合条件的语音</td></tr>';
+}
+
+/* ========== 客户子页 ========== */
+function showCustomerPage(p){
+  document.getElementById('customerPageMachine').style.display = p==='machine'?'block':'none';
+  document.getElementById('customerPageVoice').style.display = p==='voice'?'block':'none';
+  if(p==='voice') renderCustomerVoiceList();
+}
+
+/* v8.56：5 个 tab；all=全部 / sale=售货机 / static=静态柜 / dynamic=动态柜X / goose=鹅小柜（=开门柜全集） */
+function _filterByCustomerTab(m){
+  if(_customerTab === 'sale')    return machineKind(m) === '售货机';
+  if(_customerTab === 'static')  return machineKind(m) === '静态柜';
+  if(_customerTab === 'dynamic') return machineKind(m) === '动态柜X';
+  if(_customerTab === 'goose')   return isOpeningCabinet(m);
+  return true; // 'all'
+}
+
+function renderCustomerGrid(){
+  var rows = customerMachineData.filter(_filterByCustomerTab).map(function(m,i){
+    var online = m.online
+      ? '<span><span class="dot on"></span><span>在线</span></span>'
+      : '<span><span class="dot off"></span><span>离线</span></span>';
+    // v8.25：操作列整列删除（机器列表不需要行内操作）
+    // v8.49：机器名称 / 客户名称取消蓝字；机器编号恢复蓝字视觉链接（无 onclick：详情弹窗 v8.48 已删）
+    return '<tr>'+
+      '<td><input type="checkbox" onchange="toggleMachineSel(\''+m.id+'\',this.checked,\'customer\')" '+(m._selected?'checked':'')+'></td>'+
+      '<td><a class="link" href="javascript:void(0)">'+m.id+'</a></td>'+
+      '<td>'+(m.model||'—')+'</td>'+
+      '<td>'+online+'</td>'+
+      '<td>'+(m.status||'—')+'</td>'+
+      '<td>'+m.name+'</td>'+
+      '<td>'+m.cust+'</td>'+
+      '<td>'+m.sales+'</td>'+
+      '<td style="color:#8A99AB;">'+m.pay+'</td>'+
+      '<td style="color:#5A6B7F;">'+m.active+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('customerGrid').innerHTML = rows || '<tr><td colspan="10" style="text-align:center;color:#8A99AB;padding:36px 0;">当前 tab 下暂无机器</td></tr>';
+}
+
+/* v8.56：PC 端机器列表 tab 切换。tab: 'all' | 'sale' | 'static' | 'dynamic' | 'goose'；推送语音仅在 'goose' 下显示 */
+function setCustomerTab(tab){
+  _customerTab = tab;
+  ['All','Sale','Static','Dynamic','Goose'].forEach(function(k){
+    var el = document.getElementById('custTab'+k);
+    if(el) el.classList.toggle('active', k.toLowerCase() === tab);
+  });
+  // 推送按钮：仅「鹅小柜」tab 显示
+  var btn = document.getElementById('pushBatchBtn');
+  if(btn) btn.style.display = (tab === 'goose') ? '' : 'none';
+  renderCustomerGrid();
+}
+
+function renderCustomerVoiceList(){
+  // v8.43 #8：已推送台数单一真相源 = 绑定池 ∪ 真实机器表（去重），不再「有真实数就数真实、否则数池子」
+  customerVoiceData.forEach(function(v){
+    v.pushed = getPushedCount(v.vid);
+  });
+  var rows = customerVoiceData.map(function(v){
+    var st = STATUS[v.status];
+    var rejectTxt = v.status==='reject' ? '<span class="reason">原因：'+v.reason+'</span>' : '';
+    // 按状态控制操作列：
+    //   pending → 仅删除（无推/无解/无重传，语音尚未生效）
+    //   pass    → 推送机器 / 解除语音 (pushed>0) / 删除
+    //   reject  → 重新上传（编辑）/ 删除
+    // v8.50：所有操作按 vid 定位（名称可重复）；onclick 同时传 vid 与 name（name 仅用于展示）
+    var opPush = v.status==='pass'
+      ? '<button class="op-link-text" onclick="openPushBatch(\''+v.vid+'\',\''+(v.name||'').replace(/'/g,"\\'")+'\')">推送机器</button>'
+      : '';
+    var opUnbind = v.status==='pass' && v.pushed>0
+      ? '<button class="op-link-text" onclick="openUnbindVoice(\''+v.vid+'\',\''+(v.name||'').replace(/'/g,"\\'")+'\','+v.pushed+')">解除语音</button>'
+      : '';
+    // 重新上传仅已驳回状态可见
+    var opEdit = v.status==='reject'
+      ? '<button class="op-link-text" onclick="openEditVoice(\''+v.vid+'\',\''+(v.name||'').replace(/'/g,"\\'")+'\',\''+(v.desc||'').replace(/'/g,"\\'")+'\')">重新上传</button>'
+      : '';
+    var opDel = '<button class="op-link-text danger" onclick="openDeleteVoice(\''+v.vid+'\',\''+(v.name||'').replace(/'/g,"\\'")+'\','+(v.pushed||0)+')">删除</button>';
+    var ops = [opPush, opUnbind, opEdit, opDel].filter(function(s){ return s; }).join(' ');
+    return '<tr>'+
+      '<td><b>'+v.name+'</b></td>'+
+      '<td><span class="scene-tag">'+(v.scene || '—')+'</span></td>'+
+      '<td><button class="play" type="button" onclick="playListItem(this,\''+v.dur+'\',\''+v.name+'\')">试听</button></td>'+
+      '<td>'+v.dur+'</td>'+
+      '<td>'+v.size+'</td>'+
+      '<td>'+v.time+'</td>'+
+      '<td class="status-cell"><span class="tag '+st.c+'">'+st.l+'</span>'+rejectTxt+'</td>'+
+      '<td>'+(v.pushed>0 ? '<b style="color:#2E6BFF;">'+v.pushed+' 台</b>' : '<span style="color:#8A99AB;">未推送</span>')+'</td>'+
+      '<td class="ops-cell">'+ops+'</td></tr>';
+  }).join('');
+  document.getElementById('voiceTbody').innerHTML = rows;
+}
+
+/* ========== 弹窗 ========== */
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ========== 通用消息/确认弹层（替代原生 alert/confirm，永远页面居中） ========== */
+var _msgCb = null;
+var _msgTimer = null;
+function showMessage(text, type, options){
+  type = type || 'info';
+  var box = document.getElementById('msgBox');
+  var mask = document.getElementById('msgMask');
+  var cancel = document.getElementById('msgCancel');
+  var ok = document.getElementById('msgOk');
+  var mode = (options && options.mode) || 'alert'; // alert | confirm | toast
+  // toast 模式：顶部胶囊样式；alert/confirm：原居中弹层
+  if(mode === 'toast'){
+    box.className = 'msg-box toast-mode show ' + type;
+    mask.style.display = 'none';
+  } else {
+    box.className = 'msg-box show ' + type;
+    mask.style.display = '';
+  }
+  document.getElementById('msgText').innerHTML = text;
+  // 图标
+  var icon = document.getElementById('msgIcon');
+  icon.textContent = (type==='warn'?'!':type==='error'?'×':type==='success'?'✓':'i');
+  // 按钮
+  if(mode==='alert'){
+    cancel.style.display = 'none';
+    ok.textContent = '知道了';
+  } else if(mode==='confirm'){
+    cancel.style.display = '';
+    ok.textContent = (options && options.okText) || '确定';
+    cancel.textContent = (options && options.cancelText) || '取消';
+  } else if(mode==='toast'){
+    cancel.style.display = 'none';
+    ok.textContent = '';
+  }
+  // 自动关闭（仅 toast）
+  if(_msgTimer) clearTimeout(_msgTimer);
+  if(mode==='toast'){
+    var ms = (options && options.duration) || 2500;
+    _msgTimer = setTimeout(function(){ box.classList.remove('show'); }, ms);
+  }
+}
+function closeMsg(ok){
+  document.getElementById('msgBox').classList.remove('show');
+  if(_msgTimer){ clearTimeout(_msgTimer); _msgTimer = null; }
+  if(_msgCb){ var cb = _msgCb; _msgCb = null; try{ cb(ok); }catch(e){} }
+}
+function showToast(text, type){ showMessage(text, type||'warn', {mode:'toast'}); }
+function showConfirm(text, onOk, onCancel){
+  _msgCb = function(ok){ if(ok && onOk) onOk(); else if(!ok && onCancel) onCancel(); };
+  showMessage(text, 'warn', {mode:'confirm'});
+}
+document.getElementById('msgMask').addEventListener('click', function(){ closeMsg(false); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && document.getElementById('msgBox').classList.contains('show')) closeMsg(false); });
+
+var _fileUploaded = false;
+function fakeUpload(){
+  _fileUploaded = true;
+  document.getElementById('uploadBox').style.display = 'none';
+  document.getElementById('fileInfo').style.display = 'flex';
+}
+function removeFile(){
+  _fileUploaded = false;
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('uploadBox').style.display = 'block';
+}
+function submitUpload(){
+  var n = (document.getElementById('voiceName').value||'').trim();
+  if(!n){ showToast('请填写语音名称', 'warn'); return; }
+  // v8.58：播报场景必选——机器需要靠场景决定这条语音在哪个事件下播放
+  var scene = (document.getElementById('voiceScene').value||'').trim();
+  if(!scene){ showToast('请选择播报场景', 'warn'); return; }
+  // v8.50：语音名称允许重复（真实业务可能有多个同名语音），不做重名校验
+  if(!_fileUploaded){ showToast('请上传 wav 音频文件', 'warn'); return; }
+  var desc = (document.getElementById('voiceDesc').value||'').trim();
+  var time = nowStr();
+  var vid = 'v' + (Date.now().toString(36));   // 内部唯一 ID，名称可重复，操作一律按 vid 定位
+  customerVoiceData.unshift({vid:vid,name:n,scene:scene,dur:'8s',size:'1.2MB',time:time,status:'pending',pushed:0,desc:desc});
+  // v8.43 #1：同步进 OS 审核列表，否则客户上传的语音 OS 永远看不到，审核链路起点就断
+  auditData.unshift({vid:vid,name:n,scene:scene,customer:CURRENT_CUSTOMER,dur:'8s',size:'1.2MB',desc:desc,time:time,status:'pending'});
+  closeModal('uploadModal');
+  document.getElementById('voiceName').value='';
+  document.getElementById('voiceScene').value='';
+  document.getElementById('voiceDesc').value='';
+  removeFile();
+  renderCustomerVoiceList();
+  renderAudit();
+  showToast('已提交 ✓<br>已同步至 OS 审核列表，审核通过后即可推送给机器', 'success');
+}
+
+/* 从机器列表点「推送语音」前的拦截（v8.51：推送入口仅保留客户 PC 端机器列表） */
+function openPushBatchChecked(){
+  var data = customerMachineData;
+  var sel = data.filter(function(x){ return x._selected; });
+  if(sel.length === 0){
+    showToast('请先选择机器', 'warn');
+    return;
+  }
+  // v8.43 #5：机器列表还承载其他推送操作，不能在勾选阶段过滤机型；
+  //           点推送时若勾到售货机，明确提示不支持并拦下
+  var unsupported = sel.filter(function(m){ return !isOpeningCabinet(m); });
+  if(unsupported.length){
+    showToast('已选机器中有 <b>'+unsupported.length+' 台</b>非开门柜设备（'+
+      unsupported.slice(0,2).map(function(m){ return m.id; }).join('、')+
+      (unsupported.length>2 ? ' 等' : '')+'）<br>开门柜才支持推送语音，请取消勾选后重试', 'warn');
+    return;
+  }
+  // v8.43 #10：离线机器收不到下发，不允许推送
+  var offline = sel.filter(function(m){ return m.online === false; });
+  if(offline.length){
+    showToast('已选机器中有 <b>'+offline.length+' 台</b>离线（'+
+      offline.slice(0,2).map(function(m){ return m.id; }).join('、')+
+      (offline.length>2 ? ' 等' : '')+'）<br>离线机器不支持语音推送，请取消勾选后重试', 'warn');
+    return;
+  }
+  var ids = sel.map(function(x){ return x.id; });
+  openPushVoiceModal(ids);
+}
+
+/* 语音推送：本函数仅处理「语音管理页行点推送机器」入口，机器列表入口改走 openPushVoiceModal */
+var _pushVoice = '';     // v8.50：存语音 vid（内部唯一ID，名称可重复）
+var _pushVoiceName = ''; // 展示用：语音名称
+var _pushVoiceScene = ''; // v8.59：展示用：播报场景
+var _pushFrom  = '';   // 当前标识：'voicePage' | 'voiceModal'（v8.51：OS 推送已移除，无需端标识）
+/* v8.56：PC 端机器列表 tab 状态：'all' 全部机器 / 'sale' 售货机 / 'static' 静态柜 / 'dynamic' 动态柜X / 'goose' 鹅小柜（= 开门柜全集） */
+var _customerTab = 'goose';   // v8.56：默认选中「鹅小柜」tab
+var _pushPreIds = [];  // voiceModal 入口预勾选的机器 id
+
+// 推送弹窗行内播放（复用 playListItem 的 oscillator 引擎，状态切换按钮文案）
+var _vpPlayers = {};
+function playVoiceItem(ev, btn){
+  ev.stopPropagation();
+  ev.preventDefault();
+  var dur = parseInt(btn.getAttribute('data-dur')) || 8;
+  var vid = btn.getAttribute('data-vid');
+  // 关闭该弹窗内其他正在播放的
+  Object.keys(_vpPlayers).forEach(function(k){
+    if(k!==vid && _vpPlayers[k]){ try{ _vpPlayers[k].stop(); _vpPlayers[k].osc.stop(); }catch(e){} }
+  });
+  document.querySelectorAll('.voice-pick .vp-play.is-playing').forEach(function(b){ if(b!==btn){ b.classList.remove('is-playing'); b.textContent='播放'; } });
+
+  if(_vpPlayers[vid]){
+    // 已经在播放 → 停止
+    try{ _vpPlayers[vid].stop(); _vpPlayers[vid].osc.stop(); }catch(e){}
+    _vpPlayers[vid]=null;
+    btn.classList.remove('is-playing');
+    btn.textContent='播放';
+    return;
+  }
+
+  var Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx){ showToast('当前浏览器不支持音频播放', 'warn'); return; }
+  try{
+    var ctx = new Ctx();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 520;
+    gain.gain.value = 0;
+    osc.connect(gain); gain.connect(ctx.destination);
+    var t0 = ctx.currentTime;
+    var dur2 = Math.min(dur, 12);
+    for(var i=0;i<dur2;i++){
+      gain.gain.setValueAtTime(0, t0+i);
+      gain.gain.linearRampToValueAtTime(0.15, t0+i+0.05);
+      gain.gain.linearRampToValueAtTime(0, t0+i+0.9);
+    }
+    osc.start(t0);
+    osc.stop(t0 + dur2);
+    _vpPlayers[vid] = {osc:osc, stop:function(){ btn.classList.remove('is-playing'); btn.textContent='播放'; }};
+    btn.classList.add('is-playing');
+    btn.textContent='停止';
+    osc.onended = function(){ _vpPlayers[vid]=null; btn.classList.remove('is-playing'); btn.textContent='播放'; };
+  }catch(e){ /* 用户未交互，AudioContext blocked：静默忽略 */ }
+}
+/* 推送机器弹窗：分页 + 全选 + 跨页持久化选中 */
+var _pushPool = [];      // 全部开门柜（开弹窗时算一次）
+var _pushFiltered = [];   // 经搜索过滤后的列表
+var _pushSelected = {};  // {machineId:true} 跨页持久化
+var _pushPage = 1;
+var _pushPageSize = 10;
+var _pushPageSizes = [10, 20, 50];
+
+function openPushBatch(vid, name){
+  _pushVoice = vid || '';
+  _pushVoiceName = name || '';
+  _pushFrom  = 'voicePage';
+  _pushPreIds = [];
+
+  document.getElementById('pushVoiceName').textContent = _pushVoiceName || '—';
+
+  // 重新计算开门柜全集（PC 端 + OS 端合并展示，跟 v8.27 一致），并清空选中
+  // v8.43→v8.45：售货机/离线条不再在弹窗里出现（直接过滤掉，不置灰）
+  _pushPool = customerMachineData.concat(osMachineData);
+  _pushSelected = {};
+  _pushPage = 1;
+  document.getElementById('pushCount').textContent = 0;
+  document.getElementById('pushMachineCount').textContent = 0;
+  var headInput = document.getElementById('pushKwInput');
+  if(headInput) headInput.value = '';
+  renderPushMachineList('');
+  openModal('pushBatchModal');
+}
+
+function renderPushMachineList(keyword){
+  var kw = (keyword||'').toLowerCase();
+  _pushFiltered = _pushPool.filter(function(m){
+    if(!isPushableMachine(m)) return false;   // 售货机/离线直接过滤，不在列表中出现
+    return !kw || (m.id+' '+(m.name||'')).toLowerCase().indexOf(kw) > -1;
+  });
+  // 搜索后若当前页超出范围，回到第一页
+  var total = _pushFiltered.length;
+  var pageCount = Math.max(1, Math.ceil(total / _pushPageSize));
+  if(_pushPage > pageCount) _pushPage = pageCount;
+  if(_pushPage < 1) _pushPage = 1;
+
+  var start = (_pushPage - 1) * _pushPageSize;
+  var slice = _pushFiltered.slice(start, start + _pushPageSize);
+
+  var rows = slice.map(function(m){
+    var checked = !!_pushSelected[m.id];
+    return '<tr class="mp-row '+(checked?'checked':'')+'" onclick="togglePushMachine(this)">'+
+      '<td class="col-box"><input type="checkbox" '+(checked?'checked':'')+' onchange="onRowCheckChange(this,event)"></td>'+
+      '<td class="col-id"><span class="mp-id" data-id="'+m.id+'">'+m.id+'</span></td>'+
+      '<td class="col-name"><span class="mp-name">'+(m.name||'—')+'</span></td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('pushMachineList').innerHTML = rows ||
+    '<tr><td colspan="3" class="vp-empty">无符合条件机器</td></tr>';
+  renderPushPager(total, pageCount);
+  updatePushMachineCount();
+  syncPushAllCheckbox(slice);
+}
+// 行 checkbox 直接被改时（不通过点击 tr）：同步状态
+function onRowCheckChange(cb, ev){
+  ev.stopPropagation();
+  var row = cb.closest('tr.mp-row');
+  if(!row) return;
+  var idEl = row.querySelector('.mp-id');
+  if(!idEl) return;
+  var id = idEl.textContent;
+  if(cb.checked){ _pushSelected[id] = true; } else { delete _pushSelected[id]; }
+  row.classList.toggle('checked', cb.checked);
+  updatePushMachineCount();
+  // 当前页全选状态同步到表头
+  syncPushAllCheckbox(_getCurrentPageSlice());
+}
+function togglePushMachine(row){
+  var cb = row.querySelector('input[type=checkbox]');
+  if(!cb) return;
+  cb.checked = !cb.checked;
+  var idEl = row.querySelector('.mp-id');
+  if(idEl){
+    var id = idEl.textContent;
+    if(cb.checked){ _pushSelected[id] = true; } else { delete _pushSelected[id]; }
+  }
+  row.classList.toggle('checked', cb.checked);
+  updatePushMachineCount();
+  syncPushAllCheckbox(_getCurrentPageSlice());
+}
+function _getCurrentPageSlice(){
+  var start = (_pushPage - 1) * _pushPageSize;
+  return _pushFiltered.slice(start, start + _pushPageSize);
+}
+function syncPushAllCheckbox(slice){
+  var allCb = document.getElementById('pushCheckAll');
+  if(!allCb) return;
+  // v8.43：置灰行不计入全选判定，否则有离线机时「全选」永远勾不满
+  var list = (slice || []).filter(isPushableMachine);
+  if(list.length === 0){ allCb.checked = false; allCb.indeterminate = false; return; }
+  var n = list.length;
+  var ck = list.filter(function(m){ return !!_pushSelected[m.id]; }).length;
+  allCb.checked = (n > 0 && ck === n);
+  allCb.indeterminate = (ck > 0 && ck < n);
+}
+function togglePushAll(checked, ev){
+  if(ev){ ev.stopPropagation(); }
+  var slice = _getCurrentPageSlice();
+  slice.forEach(function(m){
+    if(!isPushableMachine(m)) return;   // v8.43：置灰行不参与全选
+    if(checked){ _pushSelected[m.id] = true; } else { delete _pushSelected[m.id]; }
+  });
+  // 仅同步当前页的 checkbox 视觉
+  document.querySelectorAll('#pushMachineList tr.mp-row').forEach(function(r){
+    var cb = r.querySelector('input[type=checkbox]');
+    if(cb && !cb.disabled){
+      cb.checked = checked;
+      r.classList.toggle('checked', checked);
+    }
+  });
+  syncPushAllCheckbox(slice);
+  updatePushMachineCount();
+}
+function updatePushMachineCount(){
+  // 选中总数走 _pushSelected（跨页），不走 DOM
+  var n = Object.keys(_pushSelected).length;
+  var el = document.getElementById('pushMachineCount');
+  if(el) el.textContent = n>0 ? n : 0;
+  var bannerCount = document.getElementById('pushCount');
+  if(bannerCount) bannerCount.textContent = n>0 ? n : '0';
+  // v8.43 #26：表头全选只管当前页，底部计数是跨页的，表头补一句避免歧义
+  var tip = document.getElementById('pushCrossTip');
+  if(tip) tip.textContent = '已选 ' + n + ' 台（跨页保留）';
+}
+function filterPushMachines(kw){
+  _pushPage = 1;
+  renderPushMachineList(kw);
+}
+function triggerPushSearch(){
+  var headInput = document.getElementById('pushKwInput');
+  filterPushMachines(headInput ? headInput.value : '');
+}
+function resetPushSearch(){
+  var headInput = document.getElementById('pushKwInput');
+  if(headInput) headInput.value = '';
+  filterPushMachines('');
+}
+function goPushPage(p){
+  var pageCount = Math.max(1, Math.ceil(_pushFiltered.length / _pushPageSize));
+  if(p < 1) p = 1;
+  if(p > pageCount) p = pageCount;
+  _pushPage = p;
+  var headInput = document.querySelector('#pushBatchModal .mp-head input');
+  renderPushMachineList(headInput ? headInput.value : '');
+}
+function changePushSize(s){
+  _pushPageSize = parseInt(s) || 10;
+  _pushPage = 1;
+  var headInput = document.querySelector('#pushBatchModal .mp-head input');
+  renderPushMachineList(headInput ? headInput.value : '');
+}
+function renderPushPager(total, pageCount){
+  var el = document.getElementById('pushPager');
+  if(!el) return;
+  if(total === 0){
+    el.innerHTML = '<span class="up-txt">共 0 条</span>';
+    return;
+  }
+  var html = '';
+  html += '<span class="up-txt">共 <b style="color:#1F2D3D;">'+total+'</b> 条</span>';
+
+  // 首页 / 上一页
+  html += '<button type="button" class="up-arrow" onclick="goPushPage(1)" ' + (_pushPage===1?'disabled':'') + ' title="首页">«</button>';
+  html += '<button type="button" class="up-arrow" onclick="goPushPage('+(_pushPage-1)+')" ' + (_pushPage===1?'disabled':'') + ' title="上一页">‹</button>';
+
+  // 页码（含折叠）
+  var maxAround = 2;
+  var pages = [];
+  if(pageCount <= 7){
+    for(var i=1;i<=pageCount;i++) pages.push(i);
+  } else {
+    pages.push(1);
+    for(var j=Math.max(2, _pushPage-maxAround); j<=Math.min(pageCount-1, _pushPage+maxAround); j++){
+      if(pages.indexOf(j) === -1) pages.push(j);
+    }
+    if(pageCount > 1 && pages.indexOf(pageCount) === -1) pages.push(pageCount);
+  }
+  // 折叠用 --
+  for(var k=0;k<pages.length;k++){
+    var p = pages[k];
+    if(k>0 && p - pages[k-1] > 1){
+      html += '<span class="up-sep">--</span>';
+    }
+    var cls = 'up-num' + (p===_pushPage?' active':'');
+    html += '<button type="button" class="'+cls+'" onclick="goPushPage('+p+')">'+p+'</button>';
+  }
+
+  // 下一页 / 末页
+  html += '<button type="button" class="up-arrow" onclick="goPushPage('+(_pushPage+1)+')" ' + (_pushPage===pageCount?'disabled':'') + ' title="下一页">›</button>';
+  html += '<button type="button" class="up-arrow" onclick="goPushPage('+pageCount+')" ' + (_pushPage===pageCount?'disabled':'') + ' title="末页">»</button>';
+
+  // 跳转输入
+  html += '<span class="up-txt">跳转</span>'+
+    '<input type="number" min="1" max="'+pageCount+'" value="'+_pushPage+'" class="up-jump" onkeydown="if(event.key===\'Enter\'){goPushPage(Math.max(1,Math.min('+pageCount+',parseInt(this.value)||1)));this.blur();}">'+
+    '<span class="up-txt">页</span>';
+
+  // 每页条数下拉
+  var sizeOptions = _pushPageSizes.map(function(s){
+    return '<option value="'+s+'" '+(s===_pushPageSize?'selected':'')+'>'+s+' 条/页</option>';
+  }).join('');
+  html += '<select class="up-size" onchange="changePushSize(this.value)">' + sizeOptions + '</select>';
+
+  el.innerHTML = html;
+}
+
+/* ============================================================
+   机器列表批量入口专用 — pushVoiceModal
+   v8.39：列表页已预勾选，模态内只选语音；不再渲染机器列表
+   ============================================================ */
+function openPushVoiceModal(preIds){
+  _pushFrom  = 'voiceModal';
+  _pushPreIds = Array.isArray(preIds) ? preIds.slice() : [];
+  _pushVoice = '';   // v8.42：默认不选中任何语音
+  _pushVoiceName = '';
+  _pushVoiceScene = '';
+
+  // 渲染语音选择列表
+  renderPushVoicePickList();
+  // 顶部 banner（#15 回显已选语音、#16 覆盖提示都在这里刷新）
+  updatePushVoiceBanner();
+
+  // mf 计数
+  document.getElementById('pushVoiceMachineCount').textContent = _pushPreIds.length;
+
+  openModal('pushVoiceModal');
+}
+/* v8.43→v8.45：banner 动态刷新 —— 已选机器数 + 当前选中的语音名 */
+function updatePushVoiceBanner(){
+  var el = document.getElementById('pushVoiceBanner');
+  if(!el) return;
+  var n = _pushPreIds.length;
+  // #15：点「确定」前能从焦点区确认选了哪条
+  var html = '当前已选机器 <b style="color:#1F2D3D;">'+n+'</b> 台，语音推送后立即生效（每台机器每个播报场景各保留一条语音）。' +
+    (_pushVoice ? '<br><span>已选语音：<b style="color:#1F2D3D;">'+_pushVoiceName+'</b>（'+(_pushVoiceScene || '—')+'）</span>' : '');
+  el.innerHTML = html;
+}
+
+function renderPushVoicePickList(){
+  var passList = customerVoiceData.filter(function(v){ return v.status==='pass'; });
+  if(!passList.length){
+    document.getElementById('pushVoicePickList').innerHTML =
+      '<div class="vp-empty">暂无审核通过的语音，请先在「语音管理」页上传并等待审核通过</div>';
+    return;
+  }
+  document.getElementById('pushVoicePickList').innerHTML = passList.map(function(v,i){
+    return '<label class="vp-row">'+
+      '<div class="vp-radio-wrap"><input type="radio" name="vpv" value="'+v.vid+'" data-name="'+v.name.replace(/'/g,"\\'")+'" data-scene="'+(v.scene||'—').replace(/'/g,"\\'")+'" onchange="onPickVoiceVoice(this)"><span class="vp-radio-dot"></span></div>'+
+      '<div class="vp-info">'+
+        '<div class="vn">'+v.name+'</div>'+
+        '<div class="vm">'+v.dur+' · '+(v.scene || '—')+' · 已推送 '+getPushedCount(v.vid)+' 台机器</div>'+
+      '</div>'+
+      '<button type="button" class="vp-play" data-vid="'+v.vid+'" data-dur="'+v.dur+'" onclick="playVoiceItem(event,this)">播放</button>'+
+    '</label>';
+  }).join('');
+}
+function onPickVoiceVoice(radio){
+  document.querySelectorAll('#pushVoicePickList .vp-row').forEach(function(r){ r.classList.toggle('selected', r.querySelector('input')===radio); });
+  _pushVoice = radio.value;             // vid
+  _pushVoiceName = radio.getAttribute('data-name') || '';
+  _pushVoiceScene = radio.getAttribute('data-scene') || '';
+  updatePushVoiceBanner();
+}
+
+function confirmPushVoice(){
+  // 1) 选语音
+  var picked = document.querySelector('#pushVoicePickList input[name=vpv]:checked');
+  var vid = picked ? picked.value : '';
+  if(!vid){
+    showToast('请先选择要推送的语音', 'warn');
+    return;
+  }
+  var voiceName = picked.getAttribute('data-name') || '';
+  // 2) 选机器：直接用列表页预勾选的 ids
+  var targets = _pushPreIds.slice();
+  if(targets.length === 0){ showToast('请先在机器列表勾选要推送的机器', 'warn'); return; }
+  // v8.43 #5 #10：兜底校验（正常从机器列表入口进不来，防止预勾选状态残留）
+  var bad = targets.map(findMachineById).filter(function(m){ return m && !isPushableMachine(m); });
+  if(bad.length){
+    showToast('以下机器不支持推送：'+bad.slice(0,2).map(function(m){ return m.id; }).join('、')+
+      (bad.length>2?' 等':'')+'（'+(!isOpeningCabinet(bad[0])?'非开门柜':'离线机器')+'）', 'warn');
+    return;
+  }
+
+  var time = nowStr();
+  var sc = getVoiceSceneOf(vid);
+  targets.forEach(function(id){
+    var m = findMachineById(id);
+    if(!m) return;
+    // v8.60：按场景覆盖 —— 只摘掉该机器「同一场景」的旧语音，其他场景不受影响
+    var oldVid = getSceneVoice(m, sc);
+    if(oldVid && oldVid !== vid) removeFromBoundPool(oldVid, m.id);
+    setSceneVoice(m, sc, vid);
+    m.pushTime = time;              // v8.43 #9：换语音必须刷新推送时间
+    syncMachineToPool(vid, m);    // #8：推送结果写回绑定池，保证计数单一真相源
+  });
+  // 清除机器列表入口勾选状态（v8.51：推送仅客户 PC 端，直接清客户数据）
+  customerMachineData.forEach(function(m){ m._selected = false; });
+  closeModal('pushVoiceModal');
+  renderOsGrid();
+  renderCustomerGrid();
+  renderCustomerVoiceList();
+  showToast('已推送 ✓<br>'+targets.length+' 台机器在「'+(sc||'未指定')+'」时将播放「'+voiceName+'」（立即生效）', 'success');
+}
+function confirmPush(){
+  // 语音管理入口专用：从入参已设的 _pushVoice 取（vid）
+  var vid = _pushVoice;
+  if(!vid){
+    showToast('推送目标语音缺失，请重新从「语音管理」页进入', 'warn');
+    closeModal('pushBatchModal');
+    return;
+  }
+  var voiceName = _pushVoiceName || '';
+  // 2) 选机器：跨页持久化优先
+  var targets = Object.keys(_pushSelected);
+  if(targets.length === 0){
+    document.querySelectorAll('#pushMachineList tr.mp-row').forEach(function(r){
+      var cb = r.querySelector('input[type=checkbox]');
+      var idEl = r.querySelector('.mp-id');
+      if(cb && cb.checked && idEl && idEl.textContent) targets.push(idEl.textContent);
+    });
+  }
+  if(targets.length === 0){ showToast('请先选择机器', 'warn'); return; }
+  // v8.43 #5 #10：兜底校验（弹窗已过滤售货机/离线，这里防状态残留）
+  var bad = targets.map(findMachineById).filter(function(m){ return m && !isPushableMachine(m); });
+  if(bad.length){
+    showToast('以下机器不支持推送：'+bad.slice(0,2).map(function(m){ return m.id; }).join('、')+
+      (bad.length>2?' 等':'')+'（'+(!isOpeningCabinet(bad[0])?'非开门柜':'离线机器')+'）', 'warn');
+    return;
+  }
+
+  var time = nowStr();
+  var sc2 = getVoiceSceneOf(vid);
+  targets.forEach(function(id){
+    var m = findMachineById(id);
+    if(!m) return;
+    // v8.60：按场景覆盖
+    var oldVid = getSceneVoice(m, sc2);
+    if(oldVid && oldVid !== vid) removeFromBoundPool(oldVid, m.id);
+    setSceneVoice(m, sc2, vid);
+    m.pushTime = time;              // v8.43 #9
+    syncMachineToPool(vid, m);    // v8.43 #8
+  });
+  // 清除列表入口勾选状态 + 跨页选中
+  if(_pushFrom === 'machineList'){
+    customerMachineData.forEach(function(m){ m._selected = false; });
+  }
+  _pushSelected = {};
+  closeModal('pushBatchModal');
+  renderOsGrid();
+  renderCustomerGrid();
+  renderCustomerVoiceList();
+  showToast('已推送 ✓<br>'+targets.length+' 台机器在「'+(sc2||'未指定')+'」时将播放「'+voiceName+'」（立即生效）', 'success');
+}
+
+function openAudit(vid,name,cust,scene,dur,size,time,desc,status){
+  _auditVid = vid; _auditName = name;   // v8.43：详情弹窗内的通过/驳回据此定位操作对象（v8.50 按 vid 定位）
+  document.getElementById('auditBody').innerHTML =
+    '<div class="voice-player" id="vp-detail" data-dur="'+dur+'" data-name="'+name+'">'+
+      '<button class="pp-btn" onclick="togglePlayerDetail()" type="button">▶</button>'+
+      '<div class="pp-wave" onclick="seekPlayerDetail(event)">'+
+        '<div class="pp-progress"></div>'+
+      '</div>'+
+      '<span class="pp-time"><span class="cur">00:00</span> / '+dur+'</span>'+
+    '</div>'+
+    '<table style="width:100%;font-size:13px;margin-top:14px;"><tr><td style="padding:6px 0;color:#8A99AB;width:88px;">语音名称</td><td style="color:#1F2D3D;">'+name+'</td></tr>'+
+    '<tr><td style="padding:6px 0;color:#8A99AB;">播报场景</td><td style="color:#1F2D3D;">'+(scene || '—')+'</td></tr>'+
+    '<tr><td style="padding:6px 0;color:#8A99AB;">商户名称</td><td style="color:#1F2D3D;">'+cust+'</td></tr>'+
+    '<tr><td style="padding:6px 0;color:#8A99AB;">文件信息</td><td style="color:#1F2D3D;">wav · '+size+' · '+dur+'</td></tr>'+
+    '<tr><td style="padding:6px 0;color:#8A99AB;">上传时间</td><td style="color:#1F2D3D;">'+time+'</td></tr>'+
+    '<tr><td style="padding:6px 0;color:#8A99AB;">内容说明</td><td style="color:#1F2D3D;">'+desc+'</td></tr></table>';
+  // 非待审核状态：隐藏通过/驳回按钮，只留关闭
+  var isPending = status === 'pending';
+  document.getElementById('auditModalActions').style.display = isPending ? '' : 'none';
+  openModal('auditModal');
+}
+function Arr(n){var a=[];for(var i=0;i<n;i++)a.push(i);return a;}
+
+/* ========== 语音播放引擎（Web Audio API 真实发声） ========== */
+var _audioCtx = null;
+function getCtx(){
+  if(!_audioCtx){
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+  }
+  if(_audioCtx && _audioCtx.state === 'suspended'){ _audioCtx.resume(); }
+  return _audioCtx;
+}
+function stopAllAudio(){
+  // 停止列表按钮的播放
+  document.querySelectorAll('.play.is-playing').forEach(function(b){
+    b.classList.remove('is-playing');
+    b.innerHTML = '试听';
+  });
+  // 停止详情播放器
+  document.querySelectorAll('.voice-player').forEach(function(p){
+    p.classList.remove('is-playing');
+    var btn = p.querySelector('.pp-btn'); if(btn) btn.textContent = '▶';
+    var prg = p.querySelector('.pp-progress'); if(prg) prg.style.width = '0%';
+    var cur = p.querySelector('.pp-time .cur'); if(cur) cur.textContent = '00:00';
+  });
+  // 停止正在振荡的音频
+  if(window._activeOsc){ try{ window._activeOsc.stop(); }catch(e){} window._activeOsc = null; }
+  if(window._activeTimer){ clearInterval(window._activeTimer); window._activeTimer = null; }
+}
+
+// 列表"试听"按钮 → 真实发声
+function playListItem(btn, dur, name){
+  var ctx = getCtx(); if(!ctx){ showToast('当前浏览器不支持音频播放', 'warn'); return; }
+  if(btn.classList.contains('is-playing')){
+    stopAllAudio(); return;
+  }
+  stopAllAudio(); // 先停掉其他
+  btn.classList.add('is-playing');
+  btn.innerHTML = '停止';
+  // 用 oscillator 生成语音感的合成音（440Hz 谐波 + 啁啾），实际这是模拟，按真实场景会从 url 加载 wav
+  var osc = ctx.createOscillator();
+  var gain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(440, ctx.currentTime);
+  osc.frequency.linearRampToValueAtTime(620, ctx.currentTime + 0.4);
+  osc.frequency.linearRampToValueAtTime(520, ctx.currentTime + 1.2);
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.05);
+  gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 1.0);
+  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.0);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start();
+  window._activeOsc = osc;
+  osc.onended = function(){
+    btn.classList.remove('is-playing');
+    btn.innerHTML = '试听';
+    window._activeOsc = null;
+  };
+}
+
+// 详情播放器（弹窗内）
+var _detailTimer = null;
+function togglePlayerDetail(){
+  var player = document.getElementById('vp-detail'); if(!player) return;
+  var btn = player.querySelector('.pp-btn');
+  if(player.classList.contains('is-playing')){
+    stopAllAudio(); return;
+  }
+  var ctx = getCtx(); if(!ctx){ showToast('当前浏览器不支持音频播放', 'warn'); return; }
+  stopAllAudio();
+  player.classList.add('is-playing');
+  btn.textContent = '❚❚';
+  var durStr = player.getAttribute('data-dur') || '10s';
+  var totalSec = parseInt(durStr, 10) || 10;
+  // 起一段音频
+  var osc = ctx.createOscillator();
+  var gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(523, ctx.currentTime);
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 0.05);
+  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + totalSec);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + totalSec);
+  window._activeOsc = osc;
+  // 进度条
+  var cur = player.querySelector('.pp-time .cur');
+  var prg = player.querySelector('.pp-progress');
+  var tick = 100;
+  var elapsed = 0;
+  _detailTimer = setInterval(function(){
+    elapsed += tick/1000;
+    if(elapsed >= totalSec){
+      clearInterval(_detailTimer); _detailTimer = null;
+      player.classList.remove('is-playing');
+      btn.textContent = '▶';
+      if(cur) cur.textContent = '00:00';
+      if(prg) prg.style.width = '0%';
+      return;
+    }
+    var mm = Math.floor(elapsed/60), ss = Math.floor(elapsed%60);
+    var totalMm = Math.floor(totalSec/60), totalSs = totalSec%60;
+    if(cur) cur.textContent = (mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss;
+    if(prg) prg.style.width = (elapsed/totalSec*100)+'%';
+  }, tick);
+}
+function seekPlayerDetail(e){
+  // 简单点击跳转（仅 UI）
+  var wave = e.currentTarget;
+  var rect = wave.getBoundingClientRect();
+  var pct = (e.clientX - rect.left) / rect.width;
+  var player = document.getElementById('vp-detail');
+  var cur = player.querySelector('.pp-time .cur');
+  var prg = player.querySelector('.pp-progress');
+  if(prg) prg.style.width = (pct*100)+'%';
+  var durStr = player.getAttribute('data-dur') || '10s';
+  var totalSec = parseInt(durStr, 10) || 10;
+  var sec = Math.floor(totalSec * pct);
+  var mm = Math.floor(sec/60), ss = sec%60;
+  if(cur) cur.textContent = (mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss;
+}
+/* v8.43 #2：审核动作必须落到数据上。_auditVid 记录当前操作的语音内部ID（定位用），_auditName 仅展示用
+   （列表页点通过/驳回由行内按钮传入，详情弹窗点则在 openAudit 时记录） */
+var _auditVid = '';
+var _auditName = '';
+function _setAuditVid(vid, name){
+  if(vid) _auditVid = vid;
+  if(name) _auditName = name;
+  return _auditVid;
+}
+function openPassConfirm(vid, name){
+  _setAuditVid(vid, name);
+  document.getElementById('passConfirmName').textContent = _auditName || '该语音';
+  openModal('passConfirmModal');
+}
+function doPass(){
+  var n = _auditVid;
+  closeModal('passConfirmModal');
+  closeModal('auditModal');
+  // 同步 OS 审核列表状态
+  auditData.forEach(function(a){ if(a.vid === n){ a.status = 'pass'; a.reason = ''; } });
+  // 同步 PC 端语音管理状态（OS 审核列表里的语音可能不属于当前商户，找不到则跳过）
+  var hit = false;
+  customerVoiceData.forEach(function(v){
+    if(v.vid === n){ v.status = 'pass'; v.reason = ''; hit = true; }
+  });
+  renderAudit();
+  renderCustomerVoiceList();
+  showToast('已通过 ✓<br>' + (hit ? '「'+_auditName+'」已通过审核，商户可立即推送到机器' : '「'+_auditName+'」已通过审核，该商户可推送到机器'), 'success');
+}
+function openReject(vid, name){
+  _setAuditVid(vid, name);
+  document.getElementById('rejectVoiceName').textContent = _auditName || '—';
+  document.getElementById('rejectReasonInput').value = '';
+  openModal('rejectModal');
+}
+function doReject(){
+  var reason = document.getElementById('rejectReasonInput').value.trim();
+  if(!reason){ showToast('请填写驳回原因（必填）', 'warn'); return; }
+  var n = _auditVid;
+  closeModal('rejectModal');
+  closeModal('auditModal');
+  auditData.forEach(function(a){ if(a.vid === n){ a.status = 'reject'; a.reason = reason; } });
+  customerVoiceData.forEach(function(v){ if(v.vid === n){ v.status = 'reject'; v.reason = reason; } });
+  renderAudit();
+  renderCustomerVoiceList();
+  showToast('已驳回 ✗<br>驳回原因已同步给商户，商户可在「语音管理」重新上传后再次提交', 'warn');
+}
+
+/* ========== 客户侧：编辑 / 删除 / 解除 ========== */
+var _editingVid = null;
+var _editingVoice = null; // 兼容保留：展示用的旧名
+var _editCanUpload = false; // 仅驳回支持
+function openEditVoice(vid, name, desc){
+  _editingVid = vid;
+  _editingVoice = name;
+  var v = customerVoiceData.find(function(x){ return x.vid === vid; });
+  var isReject = v && v.status === 'reject';
+  // v8.43 #7：只有「已驳回」的语音允许重新上传素材。
+  // 已通过/审核中的语音素材不允许替换（否则会出现「已推送的机器播着被替换前的素材」这种无法追溯的状态）
+  if(!isReject){
+    showToast('仅「已驳回」的语音可以重新上传素材<br>已通过的语音如需更换内容，请先删除该语音后重新上传', 'warn');
+    return;
+  }
+  _editCanUpload = isReject;
+  document.getElementById('editModalTitle').textContent = isReject ? '重新上传语音' : '编辑语音';
+  document.getElementById('editVoiceName').value = name;
+  document.getElementById('editVoiceDesc').value = desc || '';
+  // 文件区根据状态动态渲染
+  var fileArea = document.getElementById('editFileArea');
+  if(isReject){
+    fileArea.innerHTML =
+      '<label>音频文件 <span class="req">*</span></label>'+
+      '<div class="upload-box" onclick="fakeEditUpload()">'+
+        '<div class="ui">🎵</div>'+
+        '<p>点击或拖拽文件到此处上传<br>支持 <b>wav</b> 格式，单文件 ≤ 10MB</p>'+
+        '<div class="u-h">可重新上传以替换被驳回的素材</div>'+
+      '</div>'+
+      '<div class="file-info" id="editFileInfo2" style="display:none;">'+
+        '<span style="font-size:18px;">🎵</span>'+
+        '<div><div class="fn">welcome_promo_20260831.wav</div><div class="fs">1.2 MB · 8s · 44100Hz</div></div>'+
+        '<button class="fd" onclick="removeEditFile()">删除</button>'+
+      '</div>';
+    _editFileUploaded = false;
+  }else{
+    fileArea.innerHTML =
+      '<label>音频文件</label>'+
+      '<div class="file-info" style="border:1px dashed #C8D3E0;border-radius:5px;background:#FAFBFC;padding:10px 14px;display:flex;align-items:center;">'+
+        '<span style="font-size:18px;">🎵</span>'+
+        '<div style="margin-left:10px;"><div class="fn">'+name+'.wav</div><div class="fs">已上传文件不可修改</div></div>'+
+      '</div>';
+  }
+  document.getElementById('editHint').textContent = isReject
+    ? '编辑提交后将以新文件重新进入审核，审核期间不可推送到机器。'
+    : '仅可修改语音名称与说明，文件无法替换。';
+  openModal('editModal');
+}
+var _editFileUploaded = false;
+function fakeEditUpload(){
+  _editFileUploaded = true;
+  document.querySelector('#editFileArea .upload-box').style.display = 'none';
+  document.getElementById('editFileInfo2').style.display = 'flex';
+}
+function removeEditFile(){
+  _editFileUploaded = false;
+  document.querySelector('#editFileArea .upload-box').style.display = 'block';
+  document.getElementById('editFileInfo2').style.display = 'none';
+}
+function submitEdit(){
+  var n = (document.getElementById('editVoiceName').value||'').trim();
+  var vid = _editingVid;
+  if(!n){ showToast('请填写语音名称', 'warn'); return; }
+  // 驳回状态下必须重新上传文件
+  if(_editCanUpload && !_editFileUploaded){
+    showToast('请重新上传 wav 音频文件（驳回素材必须替换后重新提交）', 'warn');
+    return;
+  }
+  // v8.50：语音名称允许重复，改名不校验重名（内部按 vid 定位）
+  // 找到原记录，更新名称/说明并重置为审核中
+  var time = nowStr();
+  customerVoiceData.forEach(function(v){
+    if(v.vid === vid){
+      v.name = n;
+      v.status = 'pending';
+      v.reason = '';
+      v.time = time;
+    }
+  });
+  // v8.43 #6：改名同步 OS 审核列表中的同名记录（按 vid 定位，v8.50 改）
+  if(auditData.some(function(a){ return a.vid === vid; })){
+    auditData.forEach(function(a){ if(a.vid === vid){ a.name = n; a.status = 'pending'; a.reason = ''; a.time = time; } });
+  }
+  // v8.43 #12：重新提交即重新审核，审核期间已推送的机器停用（恢复机器端默认语音）
+  var stopped = 0;
+  customerMachineData.concat(osMachineData).forEach(function(m){
+    // v8.60：按场景清除该语音（同一台机器其他场景的语音不受影响）
+    if(clearMachineVoice(m, vid)){ m.pushTime = ''; stopped++; }
+  });
+  _voiceBoundPool[vid] = [];
+  closeModal('editModal');
+  renderCustomerVoiceList();
+  renderAudit();
+  renderOsGrid();
+  renderCustomerGrid();
+  showToast('已提交重新审核 ✓<br>审核通过前该语音不可推送到机器'+
+    (stopped>0 ? '，已暂停 '+stopped+' 台机器在该场景的播放（恢复机器端默认语音）' : ''), 'success');
+}
+
+var _delVoiceVid = '';
+var _delVoiceName = '';
+function openDeleteVoice(vid, name, pushed){
+  _delVoiceVid = vid;
+  _delVoiceName = name;
+  document.getElementById('delVoiceName').textContent = name;
+  // v8.43：绑定机器数走统一口径，与列表「已推送机器」列、解除弹窗完全一致
+  var realPushed = getPushedCount(vid);
+  document.getElementById('delVoiceWarn').innerHTML = realPushed > 0
+    ? '该语音已推送给 <b>'+realPushed+' 台</b>机器，删除后将同步解除机器上的该场景语音，对应场景播放机器端默认语音。'
+    : '删除后不可恢复。';
+  openModal('deleteModal');
+}
+function doDelete(){
+  var vid = _delVoiceVid;
+  var n = getPushedCount(vid);
+  // v8.43 #4：删除前先解除所有机器绑定，否则机器会一直绑着已删除的语音（孤儿引用）
+  customerMachineData.concat(osMachineData).forEach(function(m){
+    if(clearMachineVoice(m, vid)){ m.pushTime = ''; }
+  });
+  _voiceBoundPool[vid] = [];
+  customerVoiceData = customerVoiceData.filter(function(v){ return v.vid !== vid; });
+  // v8.50：删除语音不再移除 OS 审核列表中的审核记录（审核历史保留，留痕可追溯）
+  closeModal('deleteModal');
+  renderCustomerVoiceList();
+  renderAudit();
+  renderOsGrid();
+  renderCustomerGrid();
+  showToast(n>0
+    ? '已删除 ✓<br>已同步解除 '+n+' 台机器在该场景的语音，这些机器对应场景将播放机器端默认语音'
+    : '已删除', 'success');
+}
+
+/* 新版：从语音管理/机器详情页触发的解除语音 —— 带分页 + 每页条数切换 */
+var _unbindVoiceVid = '';      // v8.50：存 vid（内部唯一ID）
+var _unbindVoiceName = '';     // 展示用：语音名称
+var _unbindSource = customerMachineData; // 兼容保留：旧版直接传入机器数据集
+var _unbindBound = [];                   // 当前解除弹窗内的全集机器
+var _unbindPage = 1;
+var _unbindPageSize = 10;
+
+function getUnbindBound(){
+  // v8.43 #8：与「已推送台数」同一真相源 —— 绑定池 ∪ 真实机器表
+  return getPushedMachines(_unbindVoiceVid);
+}
+
+function openUnbindVoice(vid, name, pushed, source){
+  _unbindVoiceVid = vid;
+  _unbindVoiceName = name;
+  _unbindSource = source || customerMachineData;
+  _unbindBound = getUnbindBound();
+  _unbindPage = 1;
+  document.getElementById('unbindVoiceName').textContent = _unbindVoiceName || '—';
+  document.getElementById('unbindTotal').textContent = _unbindBound.length;
+  // 每页条数 select 复位
+  var sel = document.getElementById('unbindPageSize');
+  if(sel) sel.value = String(_unbindPageSize);
+  renderUnbindList();
+  openModal('unbindModal');
+}
+
+function renderUnbindList(){
+  var total = _unbindBound.length;
+  var size = _unbindPageSize;
+  var pageCount = Math.max(1, Math.ceil(total / size));
+  if(_unbindPage > pageCount) _unbindPage = pageCount;
+  var start = (_unbindPage - 1) * size;
+  var slice = _unbindBound.slice(start, start + size);
+
+  var listHtml = slice.length ? slice.map(function(m){
+    var checked = m._unbindPicked ? 'checked' : '';
+    var rowBg = m._unbindPicked ? 'style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #F0F2F5;font-size:13px;color:#1F2D3D;cursor:pointer;background:#E8F0FF;"' : 'style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #F0F2F5;font-size:13px;color:#1F2D3D;cursor:pointer;"';
+    return '<label '+rowBg+'>'+
+      '<input type="checkbox" class="unbind-cb" data-id="'+m.id+'" ' + checked + ' onclick="toggleUnbindPick(this)">'+
+      '<span><b>'+m.id+'</b> · '+(m.name||'—')+'</span>'+
+      '<span style="margin-left:auto;color:#8A99AB;font-size:12px;">推送时间 '+(m.pushTime||'—')+'</span>'+
+    '</label>';
+  }).join('') : '<div style="padding:24px;text-align:center;color:#8A99AB;font-size:13px;">该语音暂无绑定的机器</div>';
+  document.getElementById('unbindMachineList').innerHTML = listHtml;
+
+  // 全选按钮反映当前页选中态
+  var pagePicked = slice.every(function(m){ return m._unbindPicked; });
+  var pageAny = slice.some(function(m){ return m._unbindPicked; });
+  var allCb = document.getElementById('unbindAll');
+  allCb.checked = pagePicked;
+  allCb.indeterminate = pageAny && !pagePicked;
+  updateUnbindCount();
+  renderUnbindPager(total, pageCount);
+}
+
+function renderUnbindPager(total, pageCount){
+  var el = document.getElementById('unbindPager');
+  if(total === 0){
+    el.innerHTML = '<span class="up-txt" style="color:#B0B7C2;">— 暂无数据 —</span>';
+    return;
+  }
+  var size = _unbindPageSize;
+  // 单行布局：共 X 条 ‹ 1 2 3 4 -- › 跳转 [n] 页 [10条/页 ▼]
+  // 页码：当前前后各 2 页 + 首末 + 中间用 -- 占位
+  var pages = [];
+  var maxAround = 2;
+  // 总是显示 1
+  pages.push(1);
+  // 当前页前后 maxAround 个
+  for(var i = Math.max(2, _unbindPage - maxAround); i <= Math.min(pageCount - 1, _unbindPage + maxAround); i++){
+    if(pages.indexOf(i) === -1) pages.push(i);
+  }
+  // 总是显示 pageCount（>1 时）
+  if(pageCount > 1 && pages.indexOf(pageCount) === -1) pages.push(pageCount);
+
+  var html = '<span class="up-txt">共 <b style="color:#1F2D3D;">'+total+'</b> 条</span>';
+  // 上页箭头
+  html += '<button type="button" class="up-arrow" onclick="goUnbindPage('+(_unbindPage-1)+')" ' + (_unbindPage===1?'disabled':'') + ' title="上一页">‹</button>';
+  // 数字按钮（含 -- 占位）
+  var lastShown = 0;
+  for(var j = 0; j < pages.length; j++){
+    var p = pages[j];
+    if(lastShown > 0 && p - lastShown > 1){
+      // 中间有空缺，用 -- 表示折叠
+      html += '<span class="up-sep">--</span>';
+    }
+    var cls = 'up-num' + (p === _unbindPage ? ' active' : '');
+    html += '<button type="button" class="'+cls+'" onclick="goUnbindPage('+p+')">'+p+'</button>';
+    lastShown = p;
+  }
+  // 下页箭头
+  html += '<button type="button" class="up-arrow" onclick="goUnbindPage('+(_unbindPage+1)+')" ' + (_unbindPage===pageCount?'disabled':'') + ' title="下一页">›</button>';
+  // 跳转
+  html += '<span class="up-txt" style="margin-left:10px;">跳转</span>'+
+    '<input type="number" min="1" max="'+pageCount+'" value="'+_unbindPage+'" class="up-jump" onkeydown="if(event.key===\'Enter\'){goUnbindPage(Math.max(1,Math.min('+pageCount+',parseInt(this.value)||1)));this.blur();}">'+
+    '<span class="up-txt">页</span>';
+  // 每页条数
+  html += '<select class="up-size" onchange="changeUnbindPageSize(this.value)">'+
+    '<option value="10"'+(_unbindPageSize===10?' selected':'')+'>10条/页</option>'+
+    '<option value="20"'+(_unbindPageSize===20?' selected':'')+'>20条/页</option>'+
+    '<option value="50"'+(_unbindPageSize===50?' selected':'')+'>50条/页</option>'+
+    '</select>';
+  el.innerHTML = html;
+}
+
+function goUnbindPage(p){
+  p = Math.max(1, Math.min(Math.ceil(_unbindBound.length / _unbindPageSize), p));
+  _unbindPage = p;
+  renderUnbindList();
+}
+
+function changeUnbindPageSize(v){
+  _unbindPageSize = parseInt(v, 10) || 10;
+  _unbindPage = 1;
+  renderUnbindList();
+}
+
+function toggleUnbindPick(cb){
+  var id = cb.dataset.id;
+  var m = _unbindBound.find(function(x){ return x.id === id; });
+  if(m) m._unbindPicked = cb.checked;
+  // 行背景切换
+  cb.parentNode.style.background = cb.checked ? '#E8F0FF' : '';
+  // 全选状态
+  var size = _unbindPageSize;
+  var start = (_unbindPage - 1) * size;
+  var slice = _unbindBound.slice(start, start + size);
+  var pagePicked = slice.every(function(x){ return x._unbindPicked; });
+  var pageAny = slice.some(function(x){ return x._unbindPicked; });
+  var allCb = document.getElementById('unbindAll');
+  allCb.checked = pagePicked;
+  allCb.indeterminate = pageAny && !pagePicked;
+  updateUnbindCount();
+}
+
+function toggleUnbindAll(checked){
+  // 全选 = 当前页全选
+  var size = _unbindPageSize;
+  var start = (_unbindPage - 1) * size;
+  var slice = _unbindBound.slice(start, start + size);
+  slice.forEach(function(m){ m._unbindPicked = checked; });
+  renderUnbindList();
+}
+
+function updateUnbindCount(){
+  var n = _unbindBound.filter(function(m){ return m._unbindPicked; }).length;
+  var el = document.getElementById('unbindSelected');
+  if(el) el.textContent = n;
+}
+/* OS 后台机器列表行点「解除语音」：从 OS 数据集找绑定统计（v8.50 改 vid+name 传参） */
+function openOsUnbindFromMachine(vid, name){
+  openUnbindVoice(vid, name, getPushedCount(vid), osMachineData);
+}
+/* 客户 PC 端机器列表行点「解除语音」：单台直接解除 + 同步更新语音素材已推送数量（v8.50 改 vid+name 传参） */
+function unbindSingleMachine(machineId, vid, name){
+  var sc = getVoiceSceneOf(vid);
+  showConfirm('确认解除机器 '+machineId+' 在「'+(sc||'该场景')+'」下绑定的语音「'+name+'」？<br>解除后该场景将播放机器端默认语音', function(){
+  var m = findMachineById(machineId);
+  if(m){ clearMachineVoice(m, vid); m.pushTime = ''; }
+  removeFromBoundPool(vid, machineId);   // v8.43：计数随解除同步下降
+  renderCustomerGrid();
+  renderOsGrid();
+  renderCustomerVoiceList();
+  showToast('已解除 ✓<br>机器 '+machineId+' 在「'+(sc||'该场景')+'」下将播放机器端默认语音', 'success');
+  });
+}
+function doUnbind(){
+  var ids = _unbindBound.filter(function(m){ return m._unbindPicked; }).map(function(m){ return m.id; });
+  if(ids.length === 0){ showToast('请至少勾选一台要解除的机器', 'warn'); return; }
+  showConfirm('确认解除这 '+ids.length+' 台机器在「'+(getVoiceSceneOf(_unbindVoiceVid)||'该场景')+'」下的语音？<br>解除后恢复机器端该场景的默认语音', function(){
+  // 池中找到的 id 一并清理
+  _unbindBound.forEach(function(m){
+    if(ids.indexOf(m.id) !== -1){
+      clearMachineVoice(m, _unbindVoiceVid);
+      m.pushTime = '';
+      m._unbindPicked = false;
+    }
+  });
+  // v8.43：真实机器表双端都要清（旧代码只清了 PC 端，OS 端机器解除了列表上还挂着语音）
+  customerMachineData.concat(osMachineData).forEach(function(m){
+    if(ids.indexOf(m.id) !== -1 && machineHasVoice(m, _unbindVoiceVid)){
+      clearMachineVoice(m, _unbindVoiceVid);
+      m.pushTime = '';
+    }
+  });
+  // 从绑定池摘除，否则「已推送台数」不会下降（renderCustomerVoiceList 会据此重算）
+  ids.forEach(function(id){ removeFromBoundPool(_unbindVoiceVid, id); });
+  closeModal('unbindModal');
+  renderCustomerVoiceList();
+  renderCustomerGrid();
+  renderOsGrid();
+  showToast('已解除 '+ids.length+' 台机器的语音', 'success');
+  });
+}
+
+/* ========== 初始化 ========== */
+renderOsGrid();
+renderAudit();
+renderCustomerGrid();
+// v8.56：默认选中「鹅小柜」，联动显示「推送语音」按钮（HTML 默认 display:none）
+setCustomerTab(_customerTab);
+</script>
+
+<!-- 需求说明全文（内嵌，供「需求说明」按钮下载） -->
+<script type="text/plain" id="reqDocContent">
+# 开门柜语音播报 — 需求说明（最终版）
+
+> 依据当前双端原型（客户PC端 + OS后台）最终行为整理。
+> 本文档仅描述最终需求，不含任何改版过程。
+
+---
+
+## 1. 功能概述
+
+开门柜支持语音播报。客户（商户）在 PC 端上传语音素材并指定播报场景，由 OS 后台（客服）审核，审核通过后客户可将语音推送到指定机器，机器在对应场景触发时播放一次。
+
+- 仅开门柜类设备支持语音播报；售货机不支持。
+- 语音为手动推送，无定时、无有效期限制。
+- 每台机器按「播报场景」各保留一条语音（最多 4 条：开门成功 / 关门成功 / 门未关好 / 开门超时）；推送某场景的语音只覆盖该机器该场景的旧语音，不影响其他场景。
+- 播放方式：对应场景触发时播放一次。播报音量由机器端控制（机器侧已有设置，本平台不重复提供）。
+- 某场景未绑定语音时，播放**机器端该场景的默认语音**（机器端 4 个场景各内置一条，平台无配置项）。
+- **默认语音保护（实现约束）**：推送为逻辑覆盖——平台只"指定该场景播放客户语音"，机器端内置的 4 条默认语音始终保留、不可被平台改写或删除（无删除内置文件的接口）。因此解除语音、删除语音、驳回后重新审核期间、下发失败或音频损坏时，该场景均可自动回落到机器端默认语音，不会出现无声。
+
+---
+
+## 2. 角色与入口
+
+| 角色 | 端 | 入口 | 权限 |
+|---|---|---|---|
+| 客户（商户） | 客户PC端 | 机器 > 机器列表 / 机器 > 语音管理 | 上传、编辑、删除语音；推送/解除机器语音 |
+| OS 客服 | OS后台 | 机器 > 机器列表 / 机器 > 语音管理 | 审核（通过/驳回）客户上传的语音；查看机器列表 |
+
+审核权限仅 OS 后台持有；客户不可撤回已提交的审核。
+
+---
+
+## 3. 页面结构
+
+### 3.1 客户PC端
+
+#### 机器列表
+- tabs：全部机器 / 售货机 / 静态柜 / 动态柜X / 鹅小柜；**默认选中「鹅小柜」**（= 开门柜全集，仅开门柜支持推送语音）；售货机、静态柜、动态柜X 暂不接收推送。
+- 新增批量操作：**推送语音**（在原批量操作栏上叠加，**仅在「鹅小柜」tab 下出现**；其他四个 tab 不显示，详见 §4.1 推送链路与 §7.1 推送规则）。
+
+#### 语音管理
+- 顶部说明：**上传语音，提交后由客服审核，审核通过后可推送给机器。**
+- 操作栏：**上传语音**；右侧规则说明：wav 格式 · 单文件 ≤ 10MB · 时长 ≤ 60s · 仅开门柜支持 · 对应场景触发时播放一次 · 离线机器不可推送。
+- 表格列：语音名称、播报场景、试听、时长、大小、上传时间、审核状态、已推送机器、操作。
+- 操作列（按状态）：
+  - 审核中：删除
+  - 已通过：推送机器、解除语音（已推送 > 0 时）、删除
+  - 已驳回：重新上传、删除（状态旁展示驳回原因）
+
+### 3.2 OS后台
+
+- **默认进入页：语音管理（审核列表）**。机器列表页面在 OS 后台对本次迭代无语音相关操作，故默认不展示；如需查看，菜单「机器 > 机器列表」可手动进入。
+
+#### 语音管理（审核列表）
+- 顶部说明：**语音素材审核，审核通过后客户可推送给机器。**
+- 筛选：商户名称、状态（审核中/已通过/已驳回）、语音名称、上传时间。
+- 表格列：商户名称、语音名称、播报场景、试听、时长、大小、内容说明、上传时间、状态、操作。
+- 操作列（按状态）：
+  - 审核中：通过、驳回
+  - 已通过 / 已驳回：查看（打开审核详情）
+
+---
+
+## 4. 核心业务流程
+
+### 4.1 上传语音 → 审核 → 推送（主链路）
+
+```
+客户PC端·语音管理 → 上传语音
+  → 填写语音名称（必填，名称可重复）、选择播报场景（必填，单选）、上传 wav 音频（必填）、播放内容说明（选填）
+  → 提交审核
+  → 语音进入「审核中」，同时同步一条记录到 OS 审核列表（归属当前商户）
+OS后台·语音管理 → 审核列表
+  → 试听 / 查看详情
+  → 通过：状态变「已通过」，客户侧同步为可推送
+  → 驳回：必填驳回原因，状态变「已驳回」，客户侧可见原因
+客户PC端·语音管理（已通过）
+  → 「推送机器」：弹窗选择机器（仅开门柜且在线）→ 推送
+  → 或 机器列表勾选机器 → 「推送语音」：弹窗选择语音 → 推送
+  → 推送成功立即生效，覆盖所选机器在「该语音所属播报场景」下的旧语音（其他场景不受影响）
+```
+
+### 4.2 驳回 → 重新上传
+
+- 仅「已驳回」状态的语音允许重新上传素材（打开「重新上传」弹窗，可改名、改说明、替换音频）。
+- 已通过 / 审核中的语音不允许替换素材；如需更换内容，需先删除该语音后重新上传。
+- 重新提交后进入「审核中」，审核期间该语音不可推送；若此前已推送到机器，则该场景暂停播放该语音（恢复机器端该场景的默认语音）。
+
+### 4.3 删除语音
+
+- 删除前提示：若已推送到 N 台机器，删除将**同步解除**这些机器在该场景的绑定，对应场景恢复播放机器端默认语音。
+- 删除仅移除客户侧语音素材；OS 审核列表中的审核记录**保留**（审核留痕，不随客户删除而消失）。
+
+### 4.4 解除语音
+
+入口（唯一）：语音管理「已通过」行操作「解除语音」 → 弹窗展示已绑定该语音的全部机器，勾选后批量解除（支持全选本页、分页、跳页）。
+
+解除后该机器在对应场景播放机器端默认语音，已推送台数同步减少。
+
+---
+
+## 5. 弹窗说明
+
+| 弹窗 | 触发 | 内容 |
+|---|---|---|
+| 上传语音 | 语音管理「上传语音」 | 语音名称*、播报场景*（单选下拉：开门成功 / 关门成功 / 门未关好 / 开门超时）、音频文件*（wav，≤10MB，建议 ≤60s）、播放内容说明（选填）；底部「提交审核」 |
+| 语音推送·选择要推送的机器 | 语音管理「推送机器」 | banner：当前推送语音 + 已选机器数；机器列表（搜索/重置、全选当前页、跨页保留选中、分页）；底部已选 N 台 + 取消/确定 |
+| 语音推送·为已选机器选择语音 | 机器列表「鹅小柜」tab 勾选后「推送语音」 | banner：当前已选机器 N 台 + 已选语音及播报场景回显；语音单选列表（仅列出「已通过」语音，默认不选中，可试听，每行展示播报场景）；底部已选 N 台 + 取消/确定 |
+| 语音审核详情 | OS 审核列表「查看」 | 试听播放器（进度条/拖拽）+ 语音名称、播报场景、商户名称、文件信息、上传时间、内容说明；仅审核中显示通过/驳回按钮 |
+| 确认通过 | OS「通过」 | 二次确认：确认通过「语音名」？ |
+| 驳回语音 | OS「驳回」 | 展示语音名称；驳回原因*（必填，商户侧可见） |
+| 重新上传语音 | 客户语音管理「重新上传」（仅已驳回） | 语音名称*、音频文件*（必须重新上传）、播放内容说明；提示：编辑提交后将以新文件重新进入审核 |
+| 删除语音 | 语音管理「删除」 | 确认删除 + 已推送 N 台的解除说明 |
+| 解除语音 | 语音管理「解除语音」 | banner：该语音当前已推送 N 台机器；机器列表（全选本页、分页）；底部确认解除 |
+
+---
+
+## 6. 字段说明
+
+### 语音素材（customerVoiceData / auditData 共用语义）
+
+| 字段 | 说明 |
+|---|---|
+| 语音名称 | 必填；可重复（真实业务可能存在多个同名语音），上传与改名均不校验重名 |
+| 播报场景 | 必填；单选，决定该语音在哪个机器事件下播放，见下方枚举表 |
+| 音频文件 | 必填；wav 格式，单文件 ≤ 10MB，建议时长 ≤ 60s |
+| 播放内容说明 | 选填；便于客服审核 |
+| 时长 / 大小 | 上传后展示 |
+| 上传时间 | 上传/重新提交时刷新 |
+| 审核状态 | 审核中 / 已通过 / 已驳回 |
+| 驳回原因 | 驳回时必填；客户侧展示 |
+| 已推送台数 | 该语音当前绑定的机器总数（绑定池 ∪ 真实机器表，按机器编号去重） |
+
+#### 播报场景枚举
+
+| 场景 | 触发时机 |
+|---|---|
+| 开门成功 | 用户开门、电控锁打开成功时播报 |
+| 关门成功 | 门已关闭且锁到位时播报 |
+| 门未关好 | 关门动作后检测到门未关严时播报 |
+| 开门超时 | 门持续打开超过设定时长时播报 |
+
+### 机器
+
+| 字段 | 说明 |
+|---|---|
+| 在线状态 | 在线 / 离线；离线机器不可推送语音 |
+| 推送时间 | 每次推送均刷新为最新时间 |
+
+> 机器编号、机器类型、当前播放语音等为系统已有功能，与本次推送语音迭代无关，不在此列出。
+
+---
+
+## 7. 规则与限制
+
+### 7.1 推送规则
+- 仅开门柜类设备支持推送语音；售货机不可推送。
+- 离线机器不可推送。
+- 机器列表入口（**仅在「鹅小柜」tab 下出现；售货机/全部机器 tab 不显示推送按钮**）：若勾选中含售货机或离线机器，弹提示拦截，需取消勾选后重试。
+- 推送弹窗内的机器列表只展示「开门柜且在线」的机器，售货机/离线机器直接过滤不出现。
+- 确认推送时做兜底校验（防止勾选状态残留）。
+- 跨商户推送不做校验。
+- 机器列表入口与语音管理入口为两个独立弹窗：前者「为已选机器选择语音」，后者「选择要推送的机器」。
+- 推送弹窗默认不选中任何语音，未选语音点确定时提示「请先选择要推送的语音」。
+- **按场景绑定**：一台机器在 4 个播报场景下各可绑定一条语音；推送语音时，只覆盖目标机器在该语音所属场景下的旧语音，其余场景已绑定的语音保持不变。
+
+### 7.2 审核规则
+- 只有 OS 后台能审核；客户不可撤回。
+- 通过：语音变为可推送状态。
+- 驳回：必填原因，客户侧可见原因并可重新上传。
+- 重新提交后重新进入审核；审核期间该语音不可推送，已推送机器暂停播放。
+
+### 7.3 数据一致性
+- 「已推送台数」、删除提示台数、解除弹窗台数、语音列表计数均取自同一口径（绑定池 ∪ 真实机器表）。
+- 删除/解除/换绑语音时，机器绑定、绑定池、计数同步更新。
+- 换绑语音后推送时间刷新。
+
+---
+
+## 8. 状态说明
+
+| 状态 | 客户PC端 | OS后台 | 可执行操作（客户） |
+|---|---|---|---|
+| 审核中 | 显示「审核中」 | 显示「审核中」 | 删除 |
+| 已通过 | 显示「已通过」 | 显示「已通过」 | 推送机器、解除语音（若已推送）、删除 |
+| 已驳回 | 显示「已驳回」+ 原因 | 显示「已驳回」 | 重新上传、删除 |
+</script>
+<script>
+/* 需求说明下载：读取内嵌的 md 原文生成文件 */
+function downloadReqDoc(){
+  var md = document.getElementById('reqDocContent').textContent.trim();
+  var blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '语音播报_需求说明_最终版.md';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+</script>
+
+<!-- ========== 需求说明展示区（原型底部，供前端查看） ========== -->
+<section class="rd-section" data-page-node-id="lIACWPJMcJyZpK4C2ZnD6y">
+  <div class="rd-head" data-page-node-id="UNaJwcZa6Cy9u81XPNKhfJ">
+    <h2 data-page-node-id="opdHeBlhTjTQwYZi2rPs0G">需求说明</h2>
+    <span data-page-node-id="vTQCDqKwtw8M9zjEKiH2ul">供前端查看 · 与下载的《语音播报_需求说明_最终版.md》内容一致</span>
+    <a class="rd-online" href="需求说明.html" target="_blank" rel="noopener" data-page-node-id="reqOnlineLink">在线查看需求说明 ↗</a>
+  </div>
+  <div class="rd-card" id="reqDocView" data-page-node-id="iO0NLAttuyZD9s5hca9Nn5"></div>
+</section>
+<script>
+/* 极简 md → HTML 渲染（仅覆盖本文档用到的语法：标题/表格/列表/引用/代码块/粗体/分隔线） */
+(function(){
+  var md = document.getElementById('reqDocContent').textContent.trim();
+  var lines = md.split('\n');
+  var out = '';
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function inline(s){
+    return esc(s)
+      .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>');
+  }
+  /* 收集从 start 开始的连续列表行（含缩进），返回 {items:[{indent,text}], next} */
+  function collectList(start){
+    var items = [], j = start;
+    while (j < lines.length){
+      var m = lines[j].match(/^(\s*)[-*]\s+(.*)$/);
+      if (!m) break;
+      items.push({ indent: m[1].length, text: m[2] });
+      j++;
+    }
+    return { items: items, next: j };
+  }
+  /* 按缩进深度递归构建嵌套 ul，level 从 0 起（一个缩进层级 = 2 空格） */
+  function buildList(items, idx, level){
+    var html = '<ul>';
+    while (idx < items.length){
+      var it = items[idx];
+      if (it.indent < level * 2) break;
+      if (it.indent === level * 2){
+        html += '<li>' + inline(it.text);
+        idx++;
+        if (idx < items.length && items[idx].indent > level * 2){
+          var sub = buildList(items, idx, level + 1);
+          html += sub.html;
+          idx = sub.idx;
+        }
+        html += '</li>';
+      } else {
+        idx++; /* 异常缩进，跳过 */
+      }
+    }
+    html += '</ul>';
+    return { html: html, idx: idx };
+  }
+  var i = 0, inCode = false, codeBuf = [];
+  while (i < lines.length){
+    var raw = lines[i];
+    var t = raw.trim();
+    /* 代码块 */
+    if (/^```/.test(t)){
+      if (!inCode){ inCode = true; codeBuf = []; }
+      else { inCode = false; out += '<pre class="rd-code">' + codeBuf.map(esc).join('\n') + '</pre>'; }
+      i++; continue;
+    }
+    if (inCode){ codeBuf.push(raw); i++; continue; }
+    /* 表格 */
+    if (/^\|/.test(t)){
+      var rows = [];
+      while (i < lines.length && /^\|/.test(lines[i].trim())){ rows.push(lines[i]); i++; }
+      if (rows.length >= 2 && /^\|[\s:|-]+\|$/.test(rows[1].trim())){
+        var head = rows[0].split('|').slice(1,-1).map(function(c){ return c.trim(); });
+        var body = rows.slice(2).map(function(r){
+          return '<tr>' + r.split('|').slice(1,-1).map(function(c){ return '<td>' + inline(c.trim()) + '</td>'; }).join('') + '</tr>';
+        }).join('');
+        out += '<div class="rd-table-wrap"><table><thead><tr>'
+             + head.map(function(c){ return '<th>' + inline(c) + '</th>'; }).join('')
+             + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+      } else {
+        rows.forEach(function(r){ out += '<p>' + inline(r.trim()) + '</p>'; });
+      }
+      continue;
+    }
+    if (t === ''){ i++; continue; }
+    /* 分隔线 */
+    if (/^-{3,}$/.test(t)){ out += '<hr>'; i++; continue; }
+    /* 标题 */
+    var hm = t.match(/^(#{1,4})\s+(.*)$/);
+    if (hm){
+      var lv = hm[1].length;
+      out += '<h' + lv + '>' + inline(hm[2]) + '</h' + lv + '>';
+      i++; continue;
+    }
+    /* 引用 */
+    if (/^>/.test(t)){ out += '<blockquote>' + inline(t.replace(/^>\s?/,'')) + '</blockquote>'; i++; continue; }
+    /* 列表（含嵌套） */
+    if (/^[-*]\s/.test(t)){
+      var cl = collectList(i);
+      var bl = buildList(cl.items, 0, 0);
+      out += bl.html;
+      i = cl.next;
+      continue;
+    }
+    /* 普通段落：合并至下一空行/块级标记前 */
+    var para = [t];
+    i++;
+    while (i < lines.length){
+      var nt = lines[i].trim();
+      if (nt === '' || /^#{1,4}\s/.test(nt) || /^\|/.test(nt) || /^```/.test(nt) || /^>/.test(nt) || /^[-*]\s/.test(nt) || /^-{3,}$/.test(nt)) break;
+      para.push(nt); i++;
+    }
+    out += '<p>' + inline(para.join(' ')) + '</p>';
+  }
+  document.getElementById('reqDocView').innerHTML = out;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>开门柜语音播报 · 需求说明（最终版）</title>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#F2F4F8;font-family:system-ui,-apple-system,'Microsoft YaHei',sans-serif;-webkit-font-smoothing:antialiased;}
+  .doc-bar{position:sticky;top:0;z-index:10;height:40px;background:#1F2D3D;color:#fff;display:flex;align-items:center;gap:14px;padding:0 22px;font-size:12.5px;}
+  .doc-bar a{color:#8FC0FF;text-decoration:none;}
+  .doc-bar a:hover{text-decoration:underline;}
+  .doc-bar .ttl{margin-left:auto;color:#8A99AB;}
+  .doc-wrap{padding:30px 20px 80px;}
+  .rd-section{background:#F2F4F8;padding:40px 20px 70px;border-top:2px solid #E3E8F0;}
+  .rd-head{max-width:920px;margin:0 auto 18px;display:flex;align-items:baseline;gap:12px;}
+  .rd-head h2{font-size:19px;color:#1F2D3D;font-weight:600;}
+  .rd-head span{font-size:12px;color:#8A99AB;}
+  .rd-head .rd-online{margin-left:auto;align-self:center;font-size:12px;color:#2E6BFF;text-decoration:none;border:1px solid #C9DAFF;background:#F2F6FF;padding:4px 12px;border-radius:5px;line-height:1.5;white-space:nowrap;}
+  .rd-head .rd-online:hover{background:#E4EDFF;border-color:#A9C5FF;}
+  .rd-card{max-width:920px;margin:0 auto;background:#fff;border:1px solid #EEF1F6;border-radius:10px;padding:38px 46px;box-shadow:0 2px 12px rgba(31,45,61,.05);font-size:13.5px;}
+  .rd-card h1{font-size:22px;color:#1F2D3D;margin-bottom:14px;line-height:1.4;}
+  .rd-card h2{font-size:17px;color:#2E6BFF;margin:28px 0 10px;padding-bottom:8px;border-bottom:1px solid #F0F2F5;line-height:1.4;}
+  .rd-card h3{font-size:15px;color:#1F2D3D;margin:20px 0 8px;line-height:1.4;}
+  .rd-card h4{font-size:13.5px;color:#5A6B7F;margin:14px 0 6px;line-height:1.4;}
+  .rd-card p{line-height:1.8;color:#3D4D5E;margin:8px 0;}
+  .rd-card blockquote{margin:12px 0;padding:10px 14px;background:#F7F9FC;border-left:3px solid #2E6BFF;color:#5A6B7F;font-size:13px;line-height:1.7;border-radius:0 6px 6px 0;}
+  .rd-card ul{margin:8px 0;padding-left:22px;color:#3D4D5E;line-height:1.8;}
+  .rd-card ul ul{padding-left:20px;}
+  .rd-card li{margin:3px 0;}
+  .rd-card hr{border:none;border-top:1px solid #F0F2F5;margin:24px 0;}
+  .rd-card table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13px;}
+  .rd-card th,.rd-card td{border:1px solid #EBEEF4;padding:8px 12px;text-align:left;color:#3D4D5E;line-height:1.6;}
+  .rd-card th{background:#F7F9FC;color:#1F2D3D;font-weight:600;}
+  .rd-table-wrap{overflow-x:auto;margin:14px 0;}
+</style>
+</head>
+<body>
+<div class="doc-bar">
+  <a href="语音播报_双端原型.html">&larr; 返回原型</a>
+  <span class="ttl">开门柜语音播报 · 需求说明（最终版）</span>
+</div>
+<div class="doc-wrap"><div class="rd-card" id="reqDocView"></div></div>
+
+<script type="text/plain" id="reqDocContent"># 开门柜语音播报 — 需求说明（最终版）
+
+> 依据当前双端原型（客户PC端 + OS后台）最终行为整理。
+> 本文档仅描述最终需求，不含任何改版过程。
+
+---
+
+## 1. 功能概述
+
+开门柜支持语音播报。客户（商户）在 PC 端上传语音素材并指定播报场景，由 OS 后台（客服）审核，审核通过后客户可将语音推送到指定机器，机器在对应场景触发时播放一次。
+
+- 仅开门柜类设备支持语音播报；售货机不支持。
+- 语音为手动推送，无定时、无有效期限制。
+- 每台机器按「播报场景」各保留一条语音（最多 4 条：开门成功 / 关门成功 / 门未关好 / 开门超时）；推送某场景的语音只覆盖该机器该场景的旧语音，不影响其他场景。
+- 播放方式：对应场景触发时播放一次。播报音量由机器端控制（机器侧已有设置，本平台不重复提供）。
+- 某场景未绑定语音时，播放**机器端该场景的默认语音**（机器端 4 个场景各内置一条，平台无配置项）。
+- **默认语音保护（实现约束）**：推送为逻辑覆盖——平台只"指定该场景播放客户语音"，机器端内置的 4 条默认语音始终保留、不可被平台改写或删除（无删除内置文件的接口）。因此解除语音、删除语音、驳回后重新审核期间、下发失败或音频损坏时，该场景均可自动回落到机器端默认语音，不会出现无声。
+
+---
+
+## 2. 角色与入口
+
+| 角色 | 端 | 入口 | 权限 |
+|---|---|---|---|
+| 客户（商户） | 客户PC端 | 机器 > 机器列表 / 机器 > 语音管理 | 上传、编辑、删除语音；推送/解除机器语音 |
+| OS 客服 | OS后台 | 机器 > 机器列表 / 机器 > 语音管理 | 审核（通过/驳回）客户上传的语音；查看机器列表 |
+
+审核权限仅 OS 后台持有；客户不可撤回已提交的审核。
+
+---
+
+## 3. 页面结构
+
+### 3.1 客户PC端
+
+#### 机器列表
+- tabs：全部机器 / 售货机 / 静态柜 / 动态柜X / 鹅小柜；**默认选中「鹅小柜」**（= 开门柜全集，仅开门柜支持推送语音）；售货机、静态柜、动态柜X 暂不接收推送。
+- 新增批量操作：**推送语音**（在原批量操作栏上叠加，**仅在「鹅小柜」tab 下出现**；其他四个 tab 不显示，详见 §4.1 推送链路与 §7.1 推送规则）。
+
+#### 语音管理
+- 顶部说明：**上传语音，提交后由客服审核，审核通过后可推送给机器。**
+- 操作栏：**上传语音**；右侧规则说明：wav 格式 · 单文件 ≤ 10MB · 时长 ≤ 60s · 仅开门柜支持 · 对应场景触发时播放一次 · 离线机器不可推送。
+- 表格列：语音名称、播报场景、试听、时长、大小、上传时间、审核状态、已推送机器、操作。
+- 操作列（按状态）：
+  - 审核中：删除
+  - 已通过：推送机器、解除语音（已推送 > 0 时）、删除
+  - 已驳回：重新上传、删除（状态旁展示驳回原因）
+
+### 3.2 OS后台
+
+- **默认进入页：语音管理（审核列表）**。机器列表页面在 OS 后台对本次迭代无语音相关操作，故默认不展示；如需查看，菜单「机器 > 机器列表」可手动进入。
+
+#### 语音管理（审核列表）
+- 顶部说明：**语音素材审核，审核通过后客户可推送给机器。**
+- 筛选：商户名称、状态（审核中/已通过/已驳回）、语音名称、上传时间。
+- 表格列：商户名称、语音名称、播报场景、试听、时长、大小、内容说明、上传时间、状态、操作。
+- 操作列（按状态）：
+  - 审核中：通过、驳回
+  - 已通过 / 已驳回：查看（打开审核详情）
+
+---
+
+## 4. 核心业务流程
+
+### 4.1 上传语音 → 审核 → 推送（主链路）
+
+```
+客户PC端·语音管理 → 上传语音
+  → 填写语音名称（必填，名称可重复）、选择播报场景（必填，单选）、上传 wav 音频（必填）、播放内容说明（选填）
+  → 提交审核
+  → 语音进入「审核中」，同时同步一条记录到 OS 审核列表（归属当前商户）
+OS后台·语音管理 → 审核列表
+  → 试听 / 查看详情
+  → 通过：状态变「已通过」，客户侧同步为可推送
+  → 驳回：必填驳回原因，状态变「已驳回」，客户侧可见原因
+客户PC端·语音管理（已通过）
+  → 「推送机器」：弹窗选择机器（仅开门柜且在线）→ 推送
+  → 或 机器列表勾选机器 → 「推送语音」：弹窗选择语音 → 推送
+  → 推送成功立即生效，覆盖所选机器在「该语音所属播报场景」下的旧语音（其他场景不受影响）
+```
+
+### 4.2 驳回 → 重新上传
+
+- 仅「已驳回」状态的语音允许重新上传素材（打开「重新上传」弹窗，可改名、改说明、替换音频）。
+- 已通过 / 审核中的语音不允许替换素材；如需更换内容，需先删除该语音后重新上传。
+- 重新提交后进入「审核中」，审核期间该语音不可推送；若此前已推送到机器，则该场景暂停播放该语音（恢复机器端该场景的默认语音）。
+
+### 4.3 删除语音
+
+- 删除前提示：若已推送到 N 台机器，删除将**同步解除**这些机器在该场景的绑定，对应场景恢复播放机器端默认语音。
+- 删除仅移除客户侧语音素材；OS 审核列表中的审核记录**保留**（审核留痕，不随客户删除而消失）。
+
+### 4.4 解除语音
+
+入口（唯一）：语音管理「已通过」行操作「解除语音」 → 弹窗展示已绑定该语音的全部机器，勾选后批量解除（支持全选本页、分页、跳页）。
+
+解除后该机器在对应场景播放机器端默认语音，已推送台数同步减少。
+
+---
+
+## 5. 弹窗说明
+
+| 弹窗 | 触发 | 内容 |
+|---|---|---|
+| 上传语音 | 语音管理「上传语音」 | 语音名称*、播报场景*（单选下拉：开门成功 / 关门成功 / 门未关好 / 开门超时）、音频文件*（wav，≤10MB，建议 ≤60s）、播放内容说明（选填）；底部「提交审核」 |
+| 语音推送·选择要推送的机器 | 语音管理「推送机器」 | banner：当前推送语音 + 已选机器数；机器列表（搜索/重置、全选当前页、跨页保留选中、分页）；底部已选 N 台 + 取消/确定 |
+| 语音推送·为已选机器选择语音 | 机器列表「鹅小柜」tab 勾选后「推送语音」 | banner：当前已选机器 N 台 + 已选语音及播报场景回显；语音单选列表（仅列出「已通过」语音，默认不选中，可试听，每行展示播报场景）；底部已选 N 台 + 取消/确定 |
+| 语音审核详情 | OS 审核列表「查看」 | 试听播放器（进度条/拖拽）+ 语音名称、播报场景、商户名称、文件信息、上传时间、内容说明；仅审核中显示通过/驳回按钮 |
+| 确认通过 | OS「通过」 | 二次确认：确认通过「语音名」？ |
+| 驳回语音 | OS「驳回」 | 展示语音名称；驳回原因*（必填，商户侧可见） |
+| 重新上传语音 | 客户语音管理「重新上传」（仅已驳回） | 语音名称*、音频文件*（必须重新上传）、播放内容说明；提示：编辑提交后将以新文件重新进入审核 |
+| 删除语音 | 语音管理「删除」 | 确认删除 + 已推送 N 台的解除说明 |
+| 解除语音 | 语音管理「解除语音」 | banner：该语音当前已推送 N 台机器；机器列表（全选本页、分页）；底部确认解除 |
+
+---
+
+## 6. 字段说明
+
+### 语音素材（customerVoiceData / auditData 共用语义）
+
+| 字段 | 说明 |
+|---|---|
+| 语音名称 | 必填；可重复（真实业务可能存在多个同名语音），上传与改名均不校验重名 |
+| 播报场景 | 必填；单选，决定该语音在哪个机器事件下播放，见下方枚举表 |
+| 音频文件 | 必填；wav 格式，单文件 ≤ 10MB，建议时长 ≤ 60s |
+| 播放内容说明 | 选填；便于客服审核 |
+| 时长 / 大小 | 上传后展示 |
+| 上传时间 | 上传/重新提交时刷新 |
+| 审核状态 | 审核中 / 已通过 / 已驳回 |
+| 驳回原因 | 驳回时必填；客户侧展示 |
+| 已推送台数 | 该语音当前绑定的机器总数（绑定池 ∪ 真实机器表，按机器编号去重） |
+
+#### 播报场景枚举
+
+| 场景 | 触发时机 |
+|---|---|
+| 开门成功 | 用户开门、电控锁打开成功时播报 |
+| 关门成功 | 门已关闭且锁到位时播报 |
+| 门未关好 | 关门动作后检测到门未关严时播报 |
+| 开门超时 | 门持续打开超过设定时长时播报 |
+
+### 机器
+
+| 字段 | 说明 |
+|---|---|
+| 在线状态 | 在线 / 离线；离线机器不可推送语音 |
+| 推送时间 | 每次推送均刷新为最新时间 |
+
+> 机器编号、机器类型、当前播放语音等为系统已有功能，与本次推送语音迭代无关，不在此列出。
+
+---
+
+## 7. 规则与限制
+
+### 7.1 推送规则
+- 仅开门柜类设备支持推送语音；售货机不可推送。
+- 离线机器不可推送。
+- 机器列表入口（**仅在「鹅小柜」tab 下出现；售货机/全部机器 tab 不显示推送按钮**）：若勾选中含售货机或离线机器，弹提示拦截，需取消勾选后重试。
+- 推送弹窗内的机器列表只展示「开门柜且在线」的机器，售货机/离线机器直接过滤不出现。
+- 确认推送时做兜底校验（防止勾选状态残留）。
+- 跨商户推送不做校验。
+- 机器列表入口与语音管理入口为两个独立弹窗：前者「为已选机器选择语音」，后者「选择要推送的机器」。
+- 推送弹窗默认不选中任何语音，未选语音点确定时提示「请先选择要推送的语音」。
+- **按场景绑定**：一台机器在 4 个播报场景下各可绑定一条语音；推送语音时，只覆盖目标机器在该语音所属场景下的旧语音，其余场景已绑定的语音保持不变。
+
+### 7.2 审核规则
+- 只有 OS 后台能审核；客户不可撤回。
+- 通过：语音变为可推送状态。
+- 驳回：必填原因，客户侧可见原因并可重新上传。
+- 重新提交后重新进入审核；审核期间该语音不可推送，已推送机器暂停播放。
+
+### 7.3 数据一致性
+- 「已推送台数」、删除提示台数、解除弹窗台数、语音列表计数均取自同一口径（绑定池 ∪ 真实机器表）。
+- 删除/解除/换绑语音时，机器绑定、绑定池、计数同步更新。
+- 换绑语音后推送时间刷新。
+
+---
+
+## 8. 状态说明
+
+| 状态 | 客户PC端 | OS后台 | 可执行操作（客户） |
+|---|---|---|---|
+| 审核中 | 显示「审核中」 | 显示「审核中」 | 删除 |
+| 已通过 | 显示「已通过」 | 显示「已通过」 | 推送机器、解除语音（若已推送）、删除 |
+| 已驳回 | 显示「已驳回」+ 原因 | 显示「已驳回」 | 重新上传、删除 |</script>
+<script>
+/* 极简 md → HTML 渲染（仅覆盖本文档用到的语法：标题/表格/列表/引用/代码块/粗体/分隔线） */
+(function(){
+  var md = document.getElementById('reqDocContent').textContent.trim();
+  var lines = md.split('\n');
+  var out = '';
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function inline(s){
+    return esc(s)
+      .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>');
+  }
+  /* 收集从 start 开始的连续列表行（含缩进），返回 {items:[{indent,text}], next} */
+  function collectList(start){
+    var items = [], j = start;
+    while (j < lines.length){
+      var m = lines[j].match(/^(\s*)[-*]\s+(.*)$/);
+      if (!m) break;
+      items.push({ indent: m[1].length, text: m[2] });
+      j++;
+    }
+    return { items: items, next: j };
+  }
+  /* 按缩进深度递归构建嵌套 ul，level 从 0 起（一个缩进层级 = 2 空格） */
+  function buildList(items, idx, level){
+    var html = '<ul>';
+    while (idx < items.length){
+      var it = items[idx];
+      if (it.indent < level * 2) break;
+      if (it.indent === level * 2){
+        html += '<li>' + inline(it.text);
+        idx++;
+        if (idx < items.length && items[idx].indent > level * 2){
+          var sub = buildList(items, idx, level + 1);
+          html += sub.html;
+          idx = sub.idx;
+        }
+        html += '</li>';
+      } else {
+        idx++; /* 异常缩进，跳过 */
+      }
+    }
+    html += '</ul>';
+    return { html: html, idx: idx };
+  }
+  var i = 0, inCode = false, codeBuf = [];
+  while (i < lines.length){
+    var raw = lines[i];
+    var t = raw.trim();
+    /* 代码块 */
+    if (/^```/.test(t)){
+      if (!inCode){ inCode = true; codeBuf = []; }
+      else { inCode = false; out += '<pre class="rd-code">' + codeBuf.map(esc).join('\n') + '</pre>'; }
+      i++; continue;
+    }
+    if (inCode){ codeBuf.push(raw); i++; continue; }
+    /* 表格 */
+    if (/^\|/.test(t)){
+      var rows = [];
+      while (i < lines.length && /^\|/.test(lines[i].trim())){ rows.push(lines[i]); i++; }
+      if (rows.length >= 2 && /^\|[\s:|-]+\|$/.test(rows[1].trim())){
+        var head = rows[0].split('|').slice(1,-1).map(function(c){ return c.trim(); });
+        var body = rows.slice(2).map(function(r){
+          return '<tr>' + r.split('|').slice(1,-1).map(function(c){ return '<td>' + inline(c.trim()) + '</td>'; }).join('') + '</tr>';
+        }).join('');
+        out += '<div class="rd-table-wrap"><table><thead><tr>'
+             + head.map(function(c){ return '<th>' + inline(c) + '</th>'; }).join('')
+             + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+      } else {
+        rows.forEach(function(r){ out += '<p>' + inline(r.trim()) + '</p>'; });
+      }
+      continue;
+    }
+    if (t === ''){ i++; continue; }
+    /* 分隔线 */
+    if (/^-{3,}$/.test(t)){ out += '<hr>'; i++; continue; }
+    /* 标题 */
+    var hm = t.match(/^(#{1,4})\s+(.*)$/);
+    if (hm){
+      var lv = hm[1].length;
+      out += '<h' + lv + '>' + inline(hm[2]) + '</h' + lv + '>';
+      i++; continue;
+    }
+    /* 引用 */
+    if (/^>/.test(t)){ out += '<blockquote>' + inline(t.replace(/^>\s?/,'')) + '</blockquote>'; i++; continue; }
+    /* 列表（含嵌套） */
+    if (/^[-*]\s/.test(t)){
+      var cl = collectList(i);
+      var bl = buildList(cl.items, 0, 0);
+      out += bl.html;
+      i = cl.next;
+      continue;
+    }
+    /* 普通段落：合并至下一空行/块级标记前 */
+    var para = [t];
+    i++;
+    while (i < lines.length){
+      var nt = lines[i].trim();
+      if (nt === '' || /^#{1,4}\s/.test(nt) || /^\|/.test(nt) || /^```/.test(nt) || /^>/.test(nt) || /^[-*]\s/.test(nt) || /^-{3,}$/.test(nt)) break;
+      para.push(nt); i++;
+    }
+    out += '<p>' + inline(para.join(' ')) + '</p>';
+  }
+  document.getElementById('reqDocView').innerHTML = out;
+})();
+</script>
+</body>
+</html>
